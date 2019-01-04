@@ -20,85 +20,91 @@ def load_model_specs():
 
     model_specs = {}
 
+    internet = True
     try:
-        model_spec_url = branch + 'chandra_models/xija/dea/dea_spec.json'
-        with urllib.request.urlopen(model_spec_url) as url:
-            response = url.read()
-        f = response.decode('utf-8')
-    except:
-        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/dea/dea_spec.json', 'rb') as fid:
-            f = fid.read()
-    model_specs['1deamzt'] = json.loads(f)
+        _ = urllib.request.urlopen('https://example.com/index.html')
+    except urllib.error.URLError:
+        internet = False
 
-    try:
-        model_spec_url = branch + 'chandra_models/xija/dpa/dpa_spec.json'
-        with urllib.request.urlopen(model_spec_url) as url:
-            response = url.read()
-            f = response.decode('utf-8')
-    except:
-        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/dpa/dpa_spec.json', 'rb') as fid:
-            f = fid.read()
-    model_specs['1dpamzt'] = json.loads(f)
-
-    try:
-        model_spec_url = branch + 'chandra_models/xija/acisfp/acisfp_spec.json'
-        with urllib.request.urlopen(model_spec_url) as url:
-            response = url.read()
-            f = response.decode('utf-8')
-    except:
-        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/acisfp/acisfp_spec.json', 'rb') as fid:
-            f = fid.read()
-    model_specs['fptemp'] = json.loads(f)
-
-    try:
-        model_spec_url = branch + 'chandra_models/xija/psmc/psmc_spec.json'
-        with urllib.request.urlopen(model_spec_url) as url:
-            response = url.read()
-            f = response.decode('utf-8')
-    except:
-        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/psmc/psmc_spec.json', 'rb') as fid:
-            f = fid.read()
-    model_specs['1pdeaat'] = json.loads(f)
-
-    try:
-        model_spec_url = branch + 'chandra_models/xija/pftank2t/pftank2t_spec.json'
-        with urllib.request.urlopen(model_spec_url) as url:
-            response = url.read()
-            f = response.decode('utf-8')
-    except:
-        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/pftank2t/pftank2t_spec.json', 'rb') as fid:
-            f = fid.read()
-    model_specs['pftank2t'] = json.loads(f)
-
-    try:
-        model_spec_url = branch + 'chandra_models/xija/tcylaft6/tcylaft6_spec.json'
-        with urllib.request.urlopen(model_spec_url) as url:
-            response = url.read()
-            f = response.decode('utf-8')
-    except:
-        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/tcylaft6/tcylaft6_spec.json', 'rb') as fid:
-            f = fid.read()
-    model_specs['tcylaft6'] = json.loads(f)
-
-    try:
-        model_spec_url = branch + 'chandra_models/xija/fwdblkhd/4rt700t_spec.json'
-        with urllib.request.urlopen(model_spec_url) as url:
-            response = url.read()
-            f = response.decode('utf-8')
-    except:
-        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/fwdblkhd/4rt700t_spec.json', 'rb') as fid:
-            f = fid.read()
-    model_specs['4rt700t'] = json.loads(f)
-
-    try:
+    if internet:
         model_spec_url = branch + 'chandra_models/xija/aca/aca_spec.json'
         with urllib.request.urlopen(model_spec_url) as url:
             response = url.read()
             f = response.decode('utf-8')
-    except:
+    else:
         with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/aca/aca_spec.json', 'rb') as fid:
             f = fid.read()
     model_specs['aacccdpt'] = json.loads(f)
+
+    if internet:
+        model_spec_url = branch + 'chandra_models/xija/dea/dea_spec.json'
+        with urllib.request.urlopen(model_spec_url) as url:
+            response = url.read()
+        f = response.decode('utf-8')
+    else:
+        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/dea/dea_spec.json', 'rb') as fid:
+            f = fid.read()
+    model_specs['1deamzt'] = json.loads(f)
+
+    if internet:
+        model_spec_url = branch + 'chandra_models/xija/dpa/dpa_spec.json'
+        with urllib.request.urlopen(model_spec_url) as url:
+            response = url.read()
+            f = response.decode('utf-8')
+    else:
+        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/dpa/dpa_spec.json', 'rb') as fid:
+            f = fid.read()
+    model_specs['1dpamzt'] = json.loads(f)
+
+    if internet:
+        model_spec_url = branch + 'chandra_models/xija/acisfp/acisfp_spec.json'
+        with urllib.request.urlopen(model_spec_url) as url:
+            response = url.read()
+            f = response.decode('utf-8')
+    else:
+        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/acisfp/acisfp_spec.json', 'rb') as fid:
+            f = fid.read()
+    model_specs['fptemp'] = json.loads(f)
+
+    if internet:
+        model_spec_url = branch + 'chandra_models/xija/psmc/psmc_spec.json'
+        with urllib.request.urlopen(model_spec_url) as url:
+            response = url.read()
+            f = response.decode('utf-8')
+    else:
+        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/psmc/psmc_spec.json', 'rb') as fid:
+            f = fid.read()
+    model_specs['1pdeaat'] = json.loads(f)
+
+    if internet:
+        model_spec_url = branch + 'chandra_models/xija/pftank2t/pftank2t_spec.json'
+        with urllib.request.urlopen(model_spec_url) as url:
+            response = url.read()
+            f = response.decode('utf-8')
+    else:
+        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/pftank2t/pftank2t_spec.json', 'rb') as fid:
+            f = fid.read()
+    model_specs['pftank2t'] = json.loads(f)
+
+    if internet:
+        model_spec_url = branch + 'chandra_models/xija/tcylaft6/tcylaft6_spec.json'
+        with urllib.request.urlopen(model_spec_url) as url:
+            response = url.read()
+            f = response.decode('utf-8')
+    else:
+        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/tcylaft6/tcylaft6_spec.json', 'rb') as fid:
+            f = fid.read()
+    model_specs['tcylaft6'] = json.loads(f)
+
+    if internet:
+        model_spec_url = branch + 'chandra_models/xija/fwdblkhd/4rt700t_spec.json'
+        with urllib.request.urlopen(model_spec_url) as url:
+            response = url.read()
+            f = response.decode('utf-8')
+    else:
+        with open(home + '/AXAFLIB/chandra_models/chandra_models/xija/fwdblkhd/4rt700t_spec.json', 'rb') as fid:
+            f = fid.read()
+    model_specs['4rt700t'] = json.loads(f)
 
     return model_specs
 
@@ -115,68 +121,6 @@ def FtoC(cs):
         return [(c - 32) / 1.8 for c in cs]
     except TypeError:
         return (cs - 32) / 1.8
-
-
-def find_second_dwell(date, dwell1_pitch, dwell2_pitch, t_dwell1, dwell1_type, msid, limit, model_spec, init,
-                      learning_rate=10000, max_iters=10000, max_dwell=1e6, precision=0.01, duration=2592000,
-                      t_backoff=648000, debug=False):
-
-    datesecs = DateTime(date).secs
-    delta_temp = 1e6
-    iters = 0
-    current_t_dwell2 = t_dwell1
-    results = {'converged': False, 'max_iteration': iters, 'iteration_limit': max_iters, 'unconverged_hot': False,
-               'unconverged_cold': False, 'max_temp': 1e6, 'temperature_limit': limit, 'dwell_2_time': current_t_dwell2,
-               'dwell_2_time_limit': max_dwell}
-
-    # model = setup_model(msid, datesecs, datesecs + duration, model_spec, init)
-
-    mult = 1.  # If 'hot' in dwell1_type
-    if 'cool' in dwell1_type.lower():
-        mult = -1.
-
-    while delta_temp > precision and iters < max_iters and 0 < current_t_dwell2 < max_dwell:
-
-        model_results = calc_binary_schedule(datesecs, dwell1_pitch, dwell2_pitch, t_dwell1, current_t_dwell2, msid,
-                                             model_spec, init, t_backoff=t_backoff, duration=duration)
-        model_temps = model_results[msid].mvals
-        model_times = model_results[msid].times
-
-        ind = model_times > (model_times[-1] - t_backoff * 2)
-        max_temp = np.max(model_temps[ind])
-
-        if debug:
-            print('Current Dwell 2 Time: {}, Limit: {}, Max_Temp: {}, Delta Dwell 2 Time: {}'.format(current_t_dwell2, limit,
-                                                                                       max_temp,
-                                                                                       learning_rate *
-                                                                                       (limit - max_temp)))
-
-        current_t_dwell2 = current_t_dwell2 - mult * learning_rate * (limit - max_temp)
-
-        delta_temp = np.abs(limit - max_temp)
-
-        iters = iters + 1
-
-    results['max_iteration'] = iters
-    results['max_temp'] = max_temp
-    results['dwell_2_time'] = current_t_dwell2
-
-    if current_t_dwell2 >= max_dwell or current_t_dwell2 < 0:
-        if max_temp >= limit:
-            results['converged'] = False
-            results['unconverged_hot'] = True
-
-        elif max_temp < limit:
-            results['converged'] = False
-            results['unconverged_cold'] = True
-
-    elif iters == max_iters:
-        results['converged'] = False
-
-    else:
-        results['converged'] = True
-
-    return results, model_times, model_temps
 
 
 def setup_model(msid, t0, t1, model_spec, init):
@@ -235,8 +179,6 @@ def calc_binary_schedule(datesecs, p1, p2, t_dwell1, t_dwell2, msid, model_spec,
 
     model_results = run_profile(times, pitch, msid, model_spec, init, pseudo=pseudo)
 
-    # print(t_dwell2)
-
     return model_results
 
 
@@ -259,10 +201,6 @@ def create_opt_fun(datesecs, dwell1_pitch, dwell2_pitch, t_dwell1, msid, limit, 
 def find_second_dwell_sp(date, dwell1_pitch, dwell2_pitch, t_dwell1, msid, limit, model_spec, init, scale_factor=500.,
                          max_iters=200, max_dwell=1e6, temperature_precision=0.01, duration=2592000, t_backoff=648000,
                          debug=False, pseudo=None):
-
-    # disp_num = 1
-    # if debug:
-    #     disp_num = 3
 
     datesecs = DateTime(date).secs
 
