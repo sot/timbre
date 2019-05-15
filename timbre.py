@@ -36,18 +36,17 @@ results_dtype = [('msid', '|U20'),
                  ('state_data2', np.object),
                  ('t_dwell1', np.float64),
                  ('t_dwell2', np.float64),
-                 ('temp_min', np.float64),
-                 ('temp_mean', np.float64),
-                 ('temp_max', np.float64),
-                 ('pseudo_min', np.float64),
-                 ('pseudo_mean', np.float64),
-                 ('pseudo_max', np.float64),
+                 ('min_temp', np.float64),
+                 ('mean_temp', np.float64),
+                 ('max_temp', np.float64),
+                 ('min_pseudo', np.float64),
+                 ('mean_pseudo', np.float64),
+                 ('max_pseudo', np.float64),
                  ('converged', np.bool),
                  ('unconverged_hot', np.bool),
                  ('unconverged_cold', np.bool),
                  ('hotter_state', np.int8),
                  ('colder_state', np.int8)]
-
 
 def load_model_specs():
     """ Load Xija model parameters for all available models.
@@ -337,7 +336,7 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
 
 
 def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, model_spec, init,
-                      duration=2592000, t_backoff=1725000, n_dwells=20., pseudo=None):
+                      duration=2592000, t_backoff=1725000, n_dwells=20., max_dwell=None, pseudo=None):
     """ Determine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1, if any exists.
 
     Args:
@@ -354,6 +353,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         t_backoff (float): Duration for tail end of simulated schedule used to determine convergence, defaults to 10
             days (in seconds)
         n_dwells (int): Number of second dwell possibilities to run (more dwells = finer resolution)
+        max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
         pseudo (:obj:`str`, optional): Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
             wishes to retrieve model results for this pseudo node, if it exists - To be implemented at a later date
 
@@ -366,9 +366,11 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
     datesecs = DateTime(date).secs
 
-    # Ensures three "cycles" of the two dwell states, within the portion of the schedule used for evaluation (t_backoff)
-    # Minus 1000s for extra pad
-    max_dwell = (t_backoff - t_dwell1) / 3 - 1000
+    if max_dwell is None:
+        # This ensures three "cycles" of the two dwell states, within the portion of the schedule used for evaluation
+        # (t_backoff).
+        # Subtract 1000 sec for extra padding.
+        max_dwell = (t_backoff - t_dwell1) / 3 - 1000
 
     results = {'converged': False, 'unconverged_hot': False, 'unconverged_cold': False,
                'min_temp': np.nan, 'mean_temp': np.nan, 'max_temp': np.nan, 'temperature_limit': limit,
@@ -404,26 +406,11 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         results['converged'] = False
         results['unconverged_hot'] = True
 
-    elif output['max'][0] < limit:
+    else:
         results['max_temp'] = limit
-        ind = output['max'] > limit
-        ind = np.arange(len(output))[ind][0]
-        ratio = (limit - output['max'][ind - 1]) / (output['max'][ind] - output['max'][ind - 1])
-        results['dwell_2_time'] = output['duration2'][ind - 1] + ratio * (
-                    output['duration2'][ind] - output['duration2'][ind - 1])
-        results['min_temp'] = output['min'][ind - 1] + ratio * (output['min'][ind] - output['min'][ind - 1])
-        results['mean_temp'] = output['mean'][ind - 1] + ratio * (output['mean'][ind] - output['mean'][ind - 1])
-        results['converged'] = True
-
-    elif output['max'][0] > limit:
-        results['max_temp'] = limit
-        ind = output['max'] < limit
-        ind = np.arange(len(output))[ind][0]
-        ratio = (output['max'][ind - 1] - limit) / (output['max'][ind - 1] - output['max'][ind])
-        results['dwell_2_time'] = output['duration2'][ind - 1] + ratio * (
-                    output['duration2'][ind] - output['duration2'][ind - 1])
-        results['min_temp'] = output['min'][ind - 1] + ratio * (output['min'][ind] - output['min'][ind - 1])
-        results['mean_temp'] = output['mean'][ind - 1] + ratio * (output['mean'][ind] - output['mean'][ind - 1])
+        results['dwell_2_time'] = np.interp(limit,  output['max'], output['duration2'])
+        results['min_temp'] = np.interp(limit,  output['max'], output['min'])
+        results['mean_temp'] = np.interp(limit,  output['max'], output['mean'])
         results['converged'] = True
 
     if output['max'][0] > output['max'][-1]:
@@ -436,12 +423,76 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     return results, output
 
 
-def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, scale_factors=(200, 500, 1000, 2000),
-                    pseudo=None):
+def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=None, pseudo=None):
+    """ Determine dwell balance times for a set of cases.
+
+    Args:
+        msid: msid (str): Primary MSID for model being run
+        model_spec (dict, string): Dictionary of model parameters or file location where parameters can be imported
+        init (dict): Dictionary of Xija model initialization parameters, can be empty
+        limit (float): Temperature limit for primary MSID in model for this simulation
+        date (float, int, str): Date for start of simulation, in seconds from '1997:365:23:58:56.816', or any other
+            format readable by Chandra.Time.DateTime
+        state_pairs: Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states, see
+            state_pair section below for further details
+        max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
+        pseudo (:obj:`str`, optional): Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
+            wishes to retrieve model results for this pseudo node, if it exists - To be implemented at a later date,
+            not currently used
+
+    Returns:
+        Structured numpy array of results
 
 
-    # NOTES:
-    # There are some minimum fields that must be in state pairs, describe this later when filling out the docstring
+    State Pairs Data Structure:
+        The first dictionary in the pair has the following structure, the minimum fields required are shown:
+        sequence1: Numerical value to identify the first dwell segment, can be user defined, does not need to match
+            LTS value
+        obsid1: Obsid for first dwell segment
+        duration1_fraction: The fraction of total time for this Obsid in the current week represented by 'duration1'
+        duration1: Fixed dwell time for first dwell segment
+        pitch: Pitch for first dwell segment
+
+        The second dictionary in the pair has the following structure, the minimum fields required are shown:
+        sequence2: Numerical value to identify the second dwell segment, can be user defined, does not need to match
+            LTS value
+        obsid2: Obsid for second dwell segment
+        pitch: Pitch for second dwell segment
+
+        State information that does not change from dwell1 to dwell2 can be specified in the model initialization
+        dictionary. State information that does change from dwell1 to dwell2 should be specified in the state pairs
+        dictionary described above. Dictionary names for states should match those expected by Xija (e.g. fep_count,
+        roll, sim_z).
+
+
+    Example:
+
+        model_init = {'aacccdpt': {'aacccdpt': -10., 'aca0': -10., 'eclipse': False}, }
+
+        model_specs = load_model_specs()
+        date = '2019:001:00:00:00'
+        t_dwell1 = 20000.
+        msid = 'aacccdpt'
+        limit = -9.5
+
+        state_pairs = (({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
+                         'pitch': 144.2}, {'sequence2': 2000, 'obsid2': 22222, 'pitch': 154.95}),
+                       ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
+                          'pitch': 90.2}, {'sequence2': 3000, 'obsid2': 33333,'pitch': 148.95}),
+                       ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
+                          'pitch': 50}, {'sequence2': 4000, 'obsid2': 44444,'pitch': 140}),
+                       ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
+                          'pitch': 90}, {'sequence2': 5000, 'obsid2': 55555,'pitch': 100}),
+                       ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
+                          'pitch': 75}, {'sequence2': 6000, 'obsid2': 66666,'pitch': 130}),
+                       ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
+                          'pitch': 170}, {'sequence2': 7000, 'obsid2': 77777,'pitch': 90}),
+                       ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
+                          'pitch': 90}, {'sequence2': 8000, 'obsid2': 88888,'pitch': 170}))
+
+        results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, state_pairs)
+
+    """
 
     duration = 30 * 24 * 3600.
     t_backoff = 2 * duration / 3
@@ -451,7 +502,9 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, scale_fact
 
     num = np.float(len(state_pairs))
     for n, pair in enumerate(state_pairs):
-        print("Running simulations for state pair #: {} out of {}".format(n + 1, num))
+
+        if np.mod(n, 1000) == 0:
+            print("Running simulations for state pair #: {} out of {}".format(n + 1, num))
 
         dwell1_state = pair[0]
         dwell2_state = pair[1]
@@ -459,14 +512,16 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, scale_fact
         # These need to be pulled out of the dwell state data structures, otherwise they will cause errors later when
         # constructing the state "schedule".
         duration1 = dwell1_state.pop('duration1')
+        duration1_fraction = dwell1_state.pop('duration1_fraction')
         sequence1 = dwell1_state.pop('sequence1')
         obsid1 = dwell1_state.pop('obsid1')
+
         sequence2 = dwell2_state.pop('sequence2')
         obsid2 = dwell2_state.pop('obsid2')
-        duration1_fraction = dwell1_state.pop('duration1_fraction')
 
-        dwell_results, output = find_second_dwell(date, dwell1_state, dwell2_state, duration1, msid, limit, model_spec, init,
-                                            duration=duration, t_backoff=t_backoff, n_dwells=20, pseudo=None)
+        dwell_results, output = find_second_dwell(date, dwell1_state, dwell2_state, duration1, msid, limit, model_spec,
+                                                  init, duration=duration, t_backoff=t_backoff, n_dwells=20,
+                                                  max_dwell=max_dwell, pseudo=None)
 
         row = (msid,
                datestr,
