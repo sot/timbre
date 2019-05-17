@@ -4,6 +4,7 @@ from urllib.request import urlopen
 from urllib.error import URLError
 import json
 from os.path import expanduser
+from scipy import interpolate
 
 from Chandra.Time import DateTime
 import xija
@@ -407,10 +408,14 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         results['unconverged_hot'] = True
 
     else:
+        f_dwell_2_time = interpolate.interp1d(output['max'], output['duration2'], assume_sorted = False)
+        f_min_temp = interpolate.interp1d(output['max'], output['min'], assume_sorted = False)
+        f_mean_temp = interpolate.interp1d(output['max'], output['mean'], assume_sorted = False)
+
         results['max_temp'] = limit
-        results['dwell_2_time'] = np.interp(limit,  output['max'], output['duration2'])
-        results['min_temp'] = np.interp(limit,  output['max'], output['min'])
-        results['mean_temp'] = np.interp(limit,  output['max'], output['mean'])
+        results['dwell_2_time'] = f_dwell_2_time(limit)
+        results['min_temp'] = f_min_temp(limit)
+        results['mean_temp'] = f_mean_temp(limit)
         results['converged'] = True
 
     if output['max'][0] > output['max'][-1]:
@@ -520,7 +525,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=
         obsid2 = dwell2_state.pop('obsid2')
 
         dwell_results, output = find_second_dwell(date, dwell1_state, dwell2_state, duration1, msid, limit, model_spec,
-                                                  init, duration=duration, t_backoff=t_backoff, n_dwells=20,
+                                                  init, duration=duration, t_backoff=t_backoff, n_dwells=50,
                                                   max_dwell=max_dwell, pseudo=None)
 
         row = (msid,
