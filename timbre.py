@@ -428,7 +428,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     return results, output
 
 
-def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=None, pseudo=None):
+def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=None, pseudo=None, shared_data=None):
     """ Determine dwell balance times for a set of cases.
 
     Args:
@@ -444,6 +444,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=
         pseudo (:obj:`str`, optional): Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
             wishes to retrieve model results for this pseudo node, if it exists - To be implemented at a later date,
             not currently used
+        shared_data (list): Shared list of results, used when running multiple `run_state_pairs` threads in parallel via
+            the multiprocessing package
 
     Returns:
         Structured numpy array of results
@@ -568,7 +570,13 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=
 
         results.append(row)
 
-    return np.array(results, dtype=results_dtype)
+    results = np.array(results, dtype=results_dtype)
+
+    if shared_data is not None:
+        shared_data.append(results)
+    else:
+        return results
+
 
 
 pseudo_names = dict(
