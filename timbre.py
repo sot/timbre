@@ -13,6 +13,7 @@ home = expanduser("~")
 
 results_dtype = [('msid', '|U20'),
                  ('date', '|U8'),
+                 ('datesecs', np.float64),
                  ('obsid1', np.int32),
                  ('sequence1', np.int32),
                  ('duration1_fraction', np.float64),
@@ -428,7 +429,8 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     return results, output
 
 
-def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=None, pseudo=None, shared_data=None):
+def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=None, n_dwells=50, pseudo=None,
+                    shared_data=None):
     """ Determine dwell balance times for a set of cases.
 
     Args:
@@ -441,6 +443,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=
         state_pairs: Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states, see
             state_pair section below for further details
         max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
+        n_dwells (int): Number of second dwell possibilities to run (more dwells = finer resolution)
         pseudo (:obj:`str`, optional): Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
             wishes to retrieve model results for this pseudo node, if it exists - To be implemented at a later date,
             not currently used
@@ -504,6 +507,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=
     duration = 30 * 24 * 3600.
     t_backoff = 2 * duration / 3
     datestr = DateTime(date).date[:8]
+    datesecs = DateTime(date).secs
 
     results = []
 
@@ -527,11 +531,12 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=
         obsid2 = dwell2_state.pop('obsid2')
 
         dwell_results, output = find_second_dwell(date, dwell1_state, dwell2_state, duration1, msid, limit, model_spec,
-                                                  init, duration=duration, t_backoff=t_backoff, n_dwells=50,
+                                                  init, duration=duration, t_backoff=t_backoff, n_dwells=n_dwells,
                                                   max_dwell=max_dwell, pseudo=None)
 
         row = (msid,
                datestr,
+               datesecs,
                obsid1,
                sequence1,
                duration1_fraction,
@@ -612,4 +617,3 @@ if __name__ == '__main__':
     results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, state_pairs)
 
     print(results)
-
