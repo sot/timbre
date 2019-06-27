@@ -365,6 +365,55 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
     """
 
+    # def opt_dwell2():
+    #     t_vals = (1.0e-6, max_dwell / 2, max_dwell)
+    #
+    #     output = np.array([opt_fun(t) for t in t_vals], dtype=[('duration2', np.float64), ('max', np.float64),
+    #                                                            ('mean', np.float64), ('min', np.float64)])
+    #     output_sorted = np.sort(output, order='max')  # low to high
+    #     ind = np.searchsorted(output_sorted['max'], limit)
+    #
+    #     n = 0
+    #     while ((np.max(t_vals) - np.min(t_vals)) > 10) and (n < 20):
+    #         n = n + 1
+    #         if ind == 0:
+    #             return output_sorted[0]
+    #
+    #         elif ind == 1:
+    #             t_vals = [output_sorted['duration2'][0], np.mean(output_sorted['duration2'][:2]),
+    #                       output_sorted['duration2'][1]]
+    #             new = np.array([opt_fun(t_vals[1]), ], dtype=[('duration2', np.float64), ('max', np.float64),
+    #                                                           ('mean', np.float64), ('min', np.float64)])
+    #             output = np.hstack((output_sorted[:2], new))
+    #             output_sorted = np.sort(output, order='max')  # low to high
+    #             ind = np.searchsorted(output_sorted['max'], limit)
+    #
+    #         elif ind == 2:
+    #             t_vals = [output_sorted['duration2'][1], np.mean(output_sorted['duration2'][1:]),
+    #                       output_sorted['duration2'][2]]
+    #             new = np.array([opt_fun(t_vals[1]), ], dtype=[('duration2', np.float64), ('max', np.float64),
+    #                                                           ('mean', np.float64), ('min', np.float64)])
+    #             output = np.hstack((output_sorted[1:], new))
+    #             output_sorted = np.sort(output, order='max')  # low to high
+    #             ind = np.searchsorted(output_sorted['max'], limit)
+    #
+    #         else:
+    #             return None  # this should never happen, maybe throw an error here
+    #
+    #     f_dwell_2_time = interpolate.interp1d(output_sorted['max'], output_sorted['duration2'], assume_sorted=False)
+    #     f_min_temp = interpolate.interp1d(output_sorted['max'], output_sorted['min'], assume_sorted=False)
+    #     f_mean_temp = interpolate.interp1d(output_sorted['max'], output_sorted['mean'], assume_sorted=False)
+    #
+    #     results['max_temp'] = limit
+    #     results['dwell_2_time'] = f_dwell_2_time(limit)
+    #     results['min_temp'] = f_min_temp(limit)
+    #     results['mean_temp'] = f_mean_temp(limit)
+    #     results['converged'] = True
+    #
+    #     # print('Number of Iterations: {}'.format(n))
+    #
+    #     return None
+
     datesecs = DateTime(date).secs
 
     if max_dwell is None:
@@ -389,9 +438,6 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     # output = np.array([opt_fun(t) for t in dwell2_range],
     #                   dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64), ('min', np.float64)])
 
-    # n_dwells_1 = 10
-    # dwell2_range = np.logspace(1.0e-6, 1, n_dwells_1, endpoint=True) / n_dwells_1
-    # dwell2_range = max_dwell * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
     output = np.array([opt_fun(t) for t in [1.0e-6, max_dwell]],
                       dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64), ('min', np.float64)])
 
@@ -414,6 +460,8 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         results['unconverged_hot'] = True
 
     else:
+
+        # --------------------------------------------------------------------------------------------------------------
         n_dwells_1 = 10
         dwell2_range = np.logspace(1.0e-6, 1, n_dwells_1, endpoint=True) / n_dwells_1
         dwell2_range = max_dwell * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
@@ -441,15 +489,19 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
                               dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
                                      ('min', np.float64)])
 
-            f_dwell_2_time = interpolate.interp1d(output['max'], output['duration2'], assume_sorted=False)
-            f_min_temp = interpolate.interp1d(output['max'], output['min'], assume_sorted=False)
-            f_mean_temp = interpolate.interp1d(output['max'], output['mean'], assume_sorted=False)
+            f_dwell_2_time = interpolate.interp1d(output['max'], output['duration2'], kind='quadratic', assume_sorted=False)
+            f_min_temp = interpolate.interp1d(output['max'], output['min'], kind='quadratic', assume_sorted=False)
+            f_mean_temp = interpolate.interp1d(output['max'], output['mean'], kind='quadratic', assume_sorted=False)
 
             results['max_temp'] = limit
             results['dwell_2_time'] = f_dwell_2_time(limit)
             results['min_temp'] = f_min_temp(limit)
             results['mean_temp'] = f_mean_temp(limit)
             results['converged'] = True
+
+        # --------------------------------------------------------------------------------------------------------------
+
+        # opt_dwell2()
 
     if output['max'][0] > output['max'][-1]:
         results['hotter_state'] = 1
@@ -459,6 +511,9 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         results['colder_state'] = 1
 
     return results, output
+
+
+
 
 
 def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=None, n_dwells=50, pseudo=None,
