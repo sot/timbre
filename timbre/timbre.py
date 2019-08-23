@@ -34,8 +34,6 @@ results_dtype = [('msid', '|U20'),
                  ('vid_board2', np.bool),
                  ('sim_z1', np.int32),
                  ('sim_z2', np.int32),
-                 ('state_data1', np.object),
-                 ('state_data2', np.object),
                  ('t_dwell1', np.float64),
                  ('t_dwell2', np.float64),
                  ('min_temp', np.float64),
@@ -49,6 +47,11 @@ results_dtype = [('msid', '|U20'),
                  ('unconverged_cold', np.bool),
                  ('hotter_state', np.int8),
                  ('colder_state', np.int8)]
+
+
+pseudo_names = dict(
+    zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', None]))
+
 
 def load_model_specs():
     """ Load Xija model parameters for all available models.
@@ -206,9 +209,12 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
 
     Example:
 
-        times = DateTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00', '2019:003:00:00:00']).secs
+        times = np.array(DateTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00',
+                                   '2019:003:00:00:00']).secs)
 
         pitch = np.array([150, 90, 156, 156])
+
+        schedule = {'pitch': pitch}
 
         model_specs = load_model_specs()
 
@@ -644,8 +650,6 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=
                dwell2_state['vid_board'] if 'vid_board' in dwell1_state else 0,
                dwell1_state['sim_z'] if 'sim_z' in dwell1_state else 0,
                dwell2_state['sim_z'] if 'sim_z' in dwell1_state else 0,
-               dwell1_state,
-               dwell2_state,
                duration1,
                dwell_results['dwell_2_time'],
                dwell_results['min_temp'],
@@ -668,11 +672,6 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=
         shared_data.append(results)
     else:
         return results
-
-
-
-pseudo_names = dict(
-    zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', None]))
 
 
 if __name__ == '__main__':
