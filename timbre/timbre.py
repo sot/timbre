@@ -343,7 +343,7 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
 
 
 def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, model_spec, init,
-                      duration=2592000, t_backoff=1725000, n_dwells=20., max_dwell=None, pseudo=None):
+                      duration=2592000, t_backoff=1725000, n_dwells=10., max_dwell=None, pseudo=None):
     """ Determine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1, if any exists.
 
     Args:
@@ -468,7 +468,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     else:
 
         # --------------------------------------------------------------------------------------------------------------
-        n_dwells_1 = 10
+        n_dwells_1 = n_dwells
         dwell2_range = np.logspace(1.0e-6, 1, n_dwells_1, endpoint=True) / n_dwells_1
         dwell2_range = max_dwell * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
         output = np.array([opt_fun(t) for t in dwell2_range],
@@ -488,7 +488,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
             results['converged'] = True
 
         else:
-            n_dwells_2 = 10
+            n_dwells_2 = n_dwells
             t_bound = (output_sorted['duration2'][ind - 1], output_sorted['duration2'][ind])
             dwell2_range = np.linspace(np.min(t_bound), np.max(t_bound), n_dwells_2, endpoint=True)
             output = np.array([opt_fun(t) for t in dwell2_range],
@@ -522,7 +522,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
 
 
-def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=None, n_dwells=50, pseudo=None,
+def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=None, n_dwells=10, pseudo=None,
                     shared_data=None):
     """ Determine dwell balance times for a set of cases.
 
@@ -675,6 +675,9 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=
 
 
 if __name__ == '__main__':
+
+    t1 = DateTime().secs
+
     model_init = {'aacccdpt': {'aacccdpt': -10., 'aca0': -10., 'eclipse': False},
                   'pftank2t': {'pftank2t': f_to_c(95.), 'pf0tank2t': f_to_c(95.), 'eclipse': False},
                   'tcylaft6': {'tcylaft6': f_to_c(120.), 'cc0': f_to_c(120.), 'eclipse': False},
@@ -700,6 +703,10 @@ if __name__ == '__main__':
                    ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1, 'pitch': 75}, {'sequence2': 6000, 'obsid2': 66666,'pitch': 130}),
                    ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1, 'pitch': 170}, {'sequence2': 7000, 'obsid2': 77777,'pitch': 90}),
                    ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1, 'pitch': 90}, {'sequence2': 8000, 'obsid2': 88888,'pitch': 170}))
-    results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, state_pairs)
+    results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, state_pairs, n_dwells=20)
 
     print(results)
+
+    t2 = DateTime().secs
+
+    print('\nRunning {} state pairs tooks {} seconds'.format(len(state_pairs), t2 - t1))
