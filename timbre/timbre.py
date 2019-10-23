@@ -109,6 +109,8 @@ def load_model_specs():
     model_specs['4rt700t'] = get_model('fwdblkhd/4rt700t_spec.json', internet)
     model_specs['pline03t'] = get_model('pline/pline03t_model_spec.json', internet)
     model_specs['pline04t'] = get_model('pline/pline04t_model_spec.json', internet)
+    model_specs['pm1thv2t'] = get_model('mups_valve/pm1thv2t_spec.json', internet)
+    model_specs['pm2thv1t'] = get_model('mups_valve/pm2thv1t_spec.json', internet)
 
     return model_specs
 
