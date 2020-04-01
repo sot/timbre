@@ -5,6 +5,7 @@ from urllib.error import URLError
 import json
 from os.path import expanduser
 from scipy import interpolate
+from hashlib import md5
 
 from Chandra.Time import DateTime
 import xija
@@ -88,7 +89,10 @@ def load_model_specs():
         else:
             with open(home + local_dir + branch) as fid:  # 'aca/aca_spec.json', 'rb') as fid:
                 f = fid.read()
-        return json.loads(f)
+
+        md5_hash = md5(f.encode('utf-8')).hexdigest()
+
+        return json.loads(f), md5_hash
 
 
     model_specs = {}
@@ -99,18 +103,18 @@ def load_model_specs():
     except URLError:
         internet = False
 
-    model_specs['aacccdpt'] = get_model('aca/aca_spec.json', internet)
-    model_specs['1deamzt'] = get_model('dea/dea_spec.json', internet)
-    model_specs['1dpamzt'] = get_model('dpa/dpa_spec.json', internet)
-    model_specs['fptemp'] = get_model('acisfp/acisfp_spec.json', internet)
-    model_specs['1pdeaat'] = get_model('psmc/psmc_spec.json', internet)
-    model_specs['pftank2t'] = get_model('pftank2t/pftank2t_spec.json', internet)
-    model_specs['tcylaft6'] = get_model('tcylaft6/tcylaft6_spec.json', internet)
-    model_specs['4rt700t'] = get_model('fwdblkhd/4rt700t_spec.json', internet)
-    model_specs['pline03t'] = get_model('pline/pline03t_model_spec.json', internet)
-    model_specs['pline04t'] = get_model('pline/pline04t_model_spec.json', internet)
-    model_specs['pm1thv2t'] = get_model('mups_valve/pm1thv2t_spec.json', internet)
-    model_specs['pm2thv1t'] = get_model('mups_valve/pm2thv1t_spec.json', internet)
+    model_specs['aacccdpt'], model_specs['aacccdpt_hash'] = get_model('aca/aca_spec.json', internet)
+    model_specs['1deamzt'], model_specs['1deamzt_hash'] = get_model('dea/dea_spec.json', internet)
+    model_specs['1dpamzt'], model_specs['1dpamzt_hash'] = get_model('dpa/dpa_spec.json', internet)
+    model_specs['fptemp'], model_specs['fptemp_hash'] = get_model('acisfp/acisfp_spec.json', internet)
+    model_specs['1pdeaat'], model_specs['1pdeaat_hash'] = get_model('psmc/psmc_spec.json', internet)
+    model_specs['pftank2t'], model_specs['pftank2t_hash'] = get_model('pftank2t/pftank2t_spec.json', internet)
+    model_specs['tcylaft6'], model_specs['tcylaft6_hash'] = get_model('tcylaft6/tcylaft6_spec.json', internet)
+    model_specs['4rt700t'], model_specs['4rt700t_hash'] = get_model('fwdblkhd/4rt700t_spec.json', internet)
+    model_specs['pline03t'], model_specs['pline03t_hash'] = get_model('pline/pline03t_model_spec.json', internet)
+    model_specs['pline04t'], model_specs['pline04t_hash'] = get_model('pline/pline04t_model_spec.json', internet)
+    model_specs['pm1thv2t'], model_specs['pm1thv2t_hash'] = get_model('mups_valve/pm1thv2t_spec.json', internet)
+    model_specs['pm2thv1t'], model_specs['pm2thv1t_hash'] = get_model('mups_valve/pm2thv1t_spec.json', internet)
 
     return model_specs
 
@@ -708,6 +712,7 @@ if __name__ == '__main__':
     results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, state_pairs, n_dwells=20)
 
     print(results)
+    print('MD5 sum for ACA model: {}'.format(model_specs['aacccdpt_hash']))
 
     t2 = DateTime().secs
 
