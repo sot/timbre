@@ -348,7 +348,7 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
     return opt_binary_schedule
 
 
-def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, model_spec, init,
+def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, model_spec, init, limit_type='max',
                       duration=2592000, t_backoff=1725000, n_dwells=10., max_dwell=None, pseudo=None):
     """ Determine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1, if any exists.
 
@@ -362,6 +362,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         limit (float): Temperature limit for primary MSID in model for this simulation
         model_spec (dict, string): Dictionary of model parameters or file location where parameters can be imported
         init (dict): Dictionary of Xija model initialization parameters, can be empty
+        limit_type (str): Type of limit, defaults to 'max' (a maximum temperature limit), other option is 'min'
         duration (float): Duration for entire simulated schedule, defaults to 30 days (in seconds)
         t_backoff (float): Duration for tail end of simulated schedule used to determine convergence, defaults to 10
             days (in seconds)
@@ -376,55 +377,6 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
             `t_backoff` duration (e.g. the last two thirds of `duration`).
 
     """
-
-    # def opt_dwell2():
-    #     t_vals = (1.0e-6, max_dwell / 2, max_dwell)
-    #
-    #     output = np.array([opt_fun(t) for t in t_vals], dtype=[('duration2', np.float64), ('max', np.float64),
-    #                                                            ('mean', np.float64), ('min', np.float64)])
-    #     output_sorted = np.sort(output, order='max')  # low to high
-    #     ind = np.searchsorted(output_sorted['max'], limit)
-    #
-    #     n = 0
-    #     while ((np.max(t_vals) - np.min(t_vals)) > 10) and (n < 20):
-    #         n = n + 1
-    #         if ind == 0:
-    #             return output_sorted[0]
-    #
-    #         elif ind == 1:
-    #             t_vals = [output_sorted['duration2'][0], np.mean(output_sorted['duration2'][:2]),
-    #                       output_sorted['duration2'][1]]
-    #             new = np.array([opt_fun(t_vals[1]), ], dtype=[('duration2', np.float64), ('max', np.float64),
-    #                                                           ('mean', np.float64), ('min', np.float64)])
-    #             output = np.hstack((output_sorted[:2], new))
-    #             output_sorted = np.sort(output, order='max')  # low to high
-    #             ind = np.searchsorted(output_sorted['max'], limit)
-    #
-    #         elif ind == 2:
-    #             t_vals = [output_sorted['duration2'][1], np.mean(output_sorted['duration2'][1:]),
-    #                       output_sorted['duration2'][2]]
-    #             new = np.array([opt_fun(t_vals[1]), ], dtype=[('duration2', np.float64), ('max', np.float64),
-    #                                                           ('mean', np.float64), ('min', np.float64)])
-    #             output = np.hstack((output_sorted[1:], new))
-    #             output_sorted = np.sort(output, order='max')  # low to high
-    #             ind = np.searchsorted(output_sorted['max'], limit)
-    #
-    #         else:
-    #             return None  # this should never happen, maybe throw an error here
-    #
-    #     f_dwell_2_time = interpolate.interp1d(output_sorted['max'], output_sorted['duration2'], assume_sorted=False)
-    #     f_min_temp = interpolate.interp1d(output_sorted['max'], output_sorted['min'], assume_sorted=False)
-    #     f_mean_temp = interpolate.interp1d(output_sorted['max'], output_sorted['mean'], assume_sorted=False)
-    #
-    #     results['max_temp'] = limit
-    #     results['dwell_2_time'] = f_dwell_2_time(limit)
-    #     results['min_temp'] = f_min_temp(limit)
-    #     results['mean_temp'] = f_mean_temp(limit)
-    #     results['converged'] = True
-    #
-    #     # print('Number of Iterations: {}'.format(n))
-    #
-    #     return None
 
     datesecs = DateTime(date).secs
 
@@ -453,67 +405,131 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     output = np.array([opt_fun(t) for t in [1.0e-6, max_dwell]],
                       dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64), ('min', np.float64)])
 
-    if np.all(output['max'] < limit):
-        results['dwell_2_time'] = np.nan
-        ind = np.argmax(output['max'])
-        results['max_temp'] = output['max'][ind]
-        results['min_temp'] = output['min'][ind]
-        results['mean_temp'] = output['mean'][ind]
-        results['converged'] = False
-        results['unconverged_cold'] = True
+    if 'max' in limit_type.lower():
 
-    elif np.all(output['max'] > limit):
-        results['dwell_2_time'] = np.nan
-        ind = np.argmin(output['max'])
-        results['max_temp'] = output['max'][ind]
-        results['min_temp'] = output['min'][ind]
-        results['mean_temp'] = output['mean'][ind]
-        results['converged'] = False
-        results['unconverged_hot'] = True
-
-    else:
-
-        # --------------------------------------------------------------------------------------------------------------
-        n_dwells_1 = n_dwells
-        dwell2_range = np.logspace(1.0e-6, 1, n_dwells_1, endpoint=True) / n_dwells_1
-        dwell2_range = max_dwell * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
-        output = np.array([opt_fun(t) for t in dwell2_range],
-                          dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
-                                 ('min', np.float64)])
-
-        output_sorted = np.sort(output, order='max') # low to high
-        ind = np.searchsorted(output_sorted['max'], limit)
-
-        if ind == 0:
-            # np.searchsorted finds the first suitable location by default, so if ind == 0, then the duration must fall
-            # at the bounded value. This is not true if ind == -1 (the last value).
-            results['max_temp'] = limit
-            results['dwell_2_time'] = output['duration2'][ind]
+        if np.all(output['max'] < limit):
+            results['dwell_2_time'] = np.nan
+            ind = np.argmax(output['max'])
+            results['max_temp'] = output['max'][ind]
             results['min_temp'] = output['min'][ind]
             results['mean_temp'] = output['mean'][ind]
-            results['converged'] = True
+            results['converged'] = False
+            results['unconverged_cold'] = True
+
+        elif np.all(output['max'] > limit):
+            results['dwell_2_time'] = np.nan
+            ind = np.argmin(output['max'])
+            results['max_temp'] = output['max'][ind]
+            results['min_temp'] = output['min'][ind]
+            results['mean_temp'] = output['mean'][ind]
+            results['converged'] = False
+            results['unconverged_hot'] = True
 
         else:
-            n_dwells_2 = n_dwells
-            t_bound = (output_sorted['duration2'][ind - 1], output_sorted['duration2'][ind])
-            dwell2_range = np.linspace(np.min(t_bound), np.max(t_bound), n_dwells_2, endpoint=True)
+
+            # --------------------------------------------------------------------------------------------------------------
+            n_dwells_1 = n_dwells
+            dwell2_range = np.logspace(1.0e-6, 1, n_dwells_1, endpoint=True) / n_dwells_1
+            dwell2_range = max_dwell * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
             output = np.array([opt_fun(t) for t in dwell2_range],
                               dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
                                      ('min', np.float64)])
 
-            f_dwell_2_time = interpolate.interp1d(output['max'], output['duration2'], kind='quadratic', assume_sorted=False)
-            f_min_temp = interpolate.interp1d(output['max'], output['min'], kind='quadratic', assume_sorted=False)
-            f_mean_temp = interpolate.interp1d(output['max'], output['mean'], kind='quadratic', assume_sorted=False)
+            output_sorted = np.sort(output, order='max') # low to high
+            ind = np.searchsorted(output_sorted['max'], limit)
 
-            results['max_temp'] = limit
-            results['dwell_2_time'] = f_dwell_2_time(limit)
-            results['min_temp'] = f_min_temp(limit)
-            results['mean_temp'] = f_mean_temp(limit)
+            if ind == 0:
+                # np.searchsorted finds the first suitable location by default, so if ind == 0, then the duration must fall
+                # at the bounded value. This is not true if ind == -1 (the last value).
+                results['max_temp'] = limit
+                results['dwell_2_time'] = output['duration2'][ind]
+                results['min_temp'] = output['min'][ind]
+                results['mean_temp'] = output['mean'][ind]
+                results['converged'] = True
+
+            else:
+                n_dwells_2 = n_dwells
+                t_bound = (output_sorted['duration2'][ind - 1], output_sorted['duration2'][ind])
+                dwell2_range = np.linspace(np.min(t_bound), np.max(t_bound), n_dwells_2, endpoint=True)
+                output = np.array([opt_fun(t) for t in dwell2_range],
+                                  dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
+                                         ('min', np.float64)])
+
+                f_dwell_2_time = interpolate.interp1d(output['max'], output['duration2'], kind='quadratic',
+                                                      assume_sorted=False)
+                f_min_temp = interpolate.interp1d(output['max'], output['min'], kind='quadratic', assume_sorted=False)
+                f_mean_temp = interpolate.interp1d(output['max'], output['mean'], kind='quadratic', assume_sorted=False)
+
+                results['max_temp'] = limit
+                results['dwell_2_time'] = f_dwell_2_time(limit)
+                results['min_temp'] = f_min_temp(limit)
+                results['mean_temp'] = f_mean_temp(limit)
+
+            results['converged'] = True
+
+    elif 'min' in limit_type.lower():
+
+        if np.all(output['min'] < limit):
+            results['dwell_2_time'] = np.nan
+            ind = np.argmax(output['min'])
+            results['max_temp'] = output['max'][ind]
+            results['min_temp'] = output['min'][ind]
+            results['mean_temp'] = output['mean'][ind]
+            results['converged'] = False
+            results['unconverged_cold'] = True
+
+        elif np.all(output['min'] > limit):
+            results['dwell_2_time'] = np.nan
+            ind = np.argmin(output['min'])
+            results['max_temp'] = output['max'][ind]
+            results['min_temp'] = output['min'][ind]
+            results['mean_temp'] = output['mean'][ind]
+            results['converged'] = False
+            results['unconverged_hot'] = True
+
+        else:
+
+            # ----------------------------------------------------------------------------------------------------------
+            n_dwells_1 = n_dwells
+            dwell2_range = np.logspace(1.0e-6, 1, n_dwells_1, endpoint=True) / n_dwells_1
+            dwell2_range = max_dwell * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
+            output = np.array([opt_fun(t) for t in dwell2_range],
+                              dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
+                                     ('min', np.float64)])
+
+            output_sorted = np.sort(output, order='min')  # low to high
+            ind = np.searchsorted(output_sorted['min'], limit)
+
+            if ind == 0:
+                # np.searchsorted finds the first suitable location by default, so if ind == 0, then the duration must
+                # fall at the bounded value. This is not true if ind == -1 (the last value).
+                results['min_temp'] = limit
+                results['dwell_2_time'] = output['duration2'][ind]
+                results['max_temp'] = output['max'][ind]
+                results['mean_temp'] = output['mean'][ind]
+                results['converged'] = True
+
+            else:
+                n_dwells_2 = n_dwells
+                t_bound = (output_sorted['duration2'][ind - 1], output_sorted['duration2'][ind])
+                dwell2_range = np.linspace(np.min(t_bound), np.max(t_bound), n_dwells_2, endpoint=True)
+                output = np.array([opt_fun(t) for t in dwell2_range],
+                                  dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
+                                         ('min', np.float64)])
+
+                f_dwell_2_time = interpolate.interp1d(output['min'], output['duration2'], kind='quadratic',
+                                                      assume_sorted=False)
+                f_max_temp = interpolate.interp1d(output['min'], output['max'], kind='quadratic', assume_sorted=False)
+                f_mean_temp = interpolate.interp1d(output['min'], output['mean'], kind='quadratic', assume_sorted=False)
+
+                results['min_temp'] = limit
+                results['dwell_2_time'] = f_dwell_2_time(limit)
+                results['max_temp'] = f_max_temp(limit)
+                results['mean_temp'] = f_mean_temp(limit)
+
             results['converged'] = True
 
         # --------------------------------------------------------------------------------------------------------------
-
-        # opt_dwell2()
 
     if output['max'][0] > output['max'][-1]:
         results['hotter_state'] = 1
@@ -525,11 +541,8 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     return results, output
 
 
-
-
-
-def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=None, n_dwells=10, pseudo=None,
-                    shared_data=None):
+def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, limit_type='max', max_dwell=None, n_dwells=10,
+                    pseudo=None, shared_data=None):
     """ Determine dwell balance times for a set of cases.
 
     Args:
@@ -541,6 +554,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=
             format readable by Chandra.Time.DateTime
         state_pairs: Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states, see
             state_pair section below for further details
+        limit_type (str): Type of limit, defaults to 'max' (a maximum temperature limit), other option is 'min'
         max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
         n_dwells (int): Number of second dwell possibilities to run (more dwells = finer resolution)
         pseudo (:obj:`str`, optional): Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
@@ -630,8 +644,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, max_dwell=
         obsid2 = dwell2_state.pop('obsid2')
 
         dwell_results, output = find_second_dwell(date, dwell1_state, dwell2_state, duration1, msid, limit, model_spec,
-                                                  init, duration=duration, t_backoff=t_backoff, n_dwells=n_dwells,
-                                                  max_dwell=max_dwell, pseudo=None)
+                                                  init, limit_type=limit_type, duration=duration, t_backoff=t_backoff,
+                                                  n_dwells=n_dwells, max_dwell=max_dwell, pseudo=None)
 
         row = (msid,
                datestr,
