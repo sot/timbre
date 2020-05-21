@@ -439,8 +439,8 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
             ind = np.searchsorted(output_sorted['max'], limit)
 
             if ind == 0:
-                # np.searchsorted finds the first suitable location by default, so if ind == 0, then the duration must fall
-                # at the bounded value. This is not true if ind == -1 (the last value).
+                # np.searchsorted finds the first suitable location by default, so if ind == 0, then the duration must
+                # fall at the bounded value. This is not true if ind == -1 (the last value).
                 results['max_temp'] = limit
                 results['dwell_2_time'] = output['duration2'][ind]
                 results['min_temp'] = output['min'][ind]
@@ -455,10 +455,23 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
                                   dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
                                          ('min', np.float64)])
 
-                f_dwell_2_time = interpolate.interp1d(output['max'], output['duration2'], kind='quadratic',
+                # In rare conditions where all 'x' values are very close and 'wobble' a bit, it may not be sorted. If it
+                # is not sorted, the quadratic method will result in an error. It seems as if the linear method is more
+                # tolerant of this condition.
+                try:
+                    f_dwell_2_time = interpolate.interp1d(output['max'], output['duration2'], kind='quadratic',
+                                                          assume_sorted=False)
+                    f_min_temp = interpolate.interp1d(output['max'], output['min'], kind='quadratic',
                                                       assume_sorted=False)
-                f_min_temp = interpolate.interp1d(output['max'], output['min'], kind='quadratic', assume_sorted=False)
-                f_mean_temp = interpolate.interp1d(output['max'], output['mean'], kind='quadratic', assume_sorted=False)
+                    f_mean_temp = interpolate.interp1d(output['max'], output['mean'], kind='quadratic',
+                                                       assume_sorted=False)
+                except ValueError:
+                    f_dwell_2_time = interpolate.interp1d(output['max'], output['duration2'], kind='linear',
+                                                          assume_sorted=False)
+                    f_min_temp = interpolate.interp1d(output['max'], output['min'], kind='linear',
+                                                      assume_sorted=False)
+                    f_mean_temp = interpolate.interp1d(output['max'], output['mean'], kind='linear',
+                                                       assume_sorted=False)
 
                 results['max_temp'] = limit
                 results['dwell_2_time'] = f_dwell_2_time(limit)
@@ -517,10 +530,24 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
                                   dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
                                          ('min', np.float64)])
 
-                f_dwell_2_time = interpolate.interp1d(output['min'], output['duration2'], kind='quadratic',
+                # In rare conditions where all 'x' values are very close and 'wobble' a bit, it may not be sorted. If it
+                # is not sorted, the quadratic method will result in an error. It seems as if the linear method is more
+                # tolerant of this condition.
+                try:
+                    f_dwell_2_time = interpolate.interp1d(output['min'], output['duration2'], kind='quadratic',
+                                                          assume_sorted=False)
+                    f_max_temp = interpolate.interp1d(output['min'], output['max'], kind='quadratic',
                                                       assume_sorted=False)
-                f_max_temp = interpolate.interp1d(output['min'], output['max'], kind='quadratic', assume_sorted=False)
-                f_mean_temp = interpolate.interp1d(output['min'], output['mean'], kind='quadratic', assume_sorted=False)
+                    f_mean_temp = interpolate.interp1d(output['min'], output['mean'], kind='quadratic',
+                                                       assume_sorted=False)
+
+                except ValueError:
+                    f_dwell_2_time = interpolate.interp1d(output['min'], output['duration2'], kind='linear',
+                                                          assume_sorted=False)
+                    f_max_temp = interpolate.interp1d(output['min'], output['max'], kind='linear',
+                                                      assume_sorted=False)
+                    f_mean_temp = interpolate.interp1d(output['min'], output['mean'], kind='linear',
+                                                       assume_sorted=False)
 
                 results['min_temp'] = limit
                 results['dwell_2_time'] = f_dwell_2_time(limit)
@@ -731,3 +758,17 @@ if __name__ == '__main__':
     t2 = DateTime().secs
 
     print('\nRunning {} state pairs tooks {} seconds'.format(len(state_pairs), t2 - t1))
+
+    pair = {'sequence1': 1, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': 30000, 'pitch': 155, 'roll': 10,
+            'ccd_count': 4, 'fep_count': 4, 'vid_board': 1, 'clocking': 1}, {'sequence2': 2, 'obsid2': 22222,
+                                                                             'pitch': 155, 'roll': 10, 'ccd_count': 4,
+                                                                             'fep_count': 4, 'vid_board': 1,
+                                                                             'clocking': 1}
+    # model_specs = load_model_specs()
+    # msid = '1dpamzt'
+    # # limit = 36.5
+    # datestamp = DateTime().caldate[:9]
+    # init = {'1dpamzt': 37.5, 'dpa0': 37.5, 'eclipse': False, 'dpa_power': 0.0, 'sim_z': 100000}
+    # date = '2021:182:00:00:00'
+    # limit = 39.5
+    # run_state_pairs(msid, model_specs[msid], init, limit, date, [pair, ], max_dwell=200000)
