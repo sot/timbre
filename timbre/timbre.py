@@ -10,31 +10,16 @@ from hashlib import md5
 from Chandra.Time import DateTime
 import xija
 
+import h5py
+utf8_type_20 = h5py.string_dtype('utf-8', 20)
+utf8_type_8 = h5py.string_dtype('utf-8', 8)
+
 home = expanduser("~")
 
-results_dtype = [('msid', '|U20'),
-                 ('date', '|U8'),
+results_dtype = [('msid', utf8_type_20),
+                 ('date', utf8_type_8),
                  ('datesecs', np.float64),
-                 ('obsid1', np.int32),
-                 ('sequence1', np.int32),
-                 ('duration1_fraction', np.float64),
-                 ('obsid2', np.int32),
-                 ('sequence2', np.int32),
                  ('limit', np.float64),
-                 ('pitch1', np.float64),
-                 ('pitch2', np.float64),
-                 ('roll1', np.float64),
-                 ('roll2', np.float64),
-                 ('ccd_count1', np.int8),
-                 ('ccd_count2', np.int8),
-                 ('fep_count1', np.int8),
-                 ('fep_count2', np.int8),
-                 ('clocking1', np.bool),
-                 ('clocking2', np.bool),
-                 ('vid_board1', np.bool),
-                 ('vid_board2', np.bool),
-                 ('sim_z1', np.int32),
-                 ('sim_z2', np.int32),
                  ('t_dwell1', np.float64),
                  ('t_dwell2', np.float64),
                  ('min_temp', np.float64),
@@ -49,9 +34,8 @@ results_dtype = [('msid', '|U20'),
                  ('hotter_state', np.int8),
                  ('colder_state', np.int8)]
 
-
 pseudo_names = dict(
-    zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', None]))
+    zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', 'dea0']))
 
 
 def load_model_specs():
@@ -349,7 +333,7 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
 
 
 def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, model_spec, init, limit_type='max',
-                      duration=2592000, t_backoff=1725000, n_dwells=10., max_dwell=None, pseudo=None):
+                      duration=2592000, t_backoff=1725000, n_dwells=10., max_dwell=None, pseudo=None, debug=False):
     """ Determine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1, if any exists.
 
     Args:
@@ -370,15 +354,17 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
         pseudo (:obj:`str`, optional): Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
             wishes to retrieve model results for this pseudo node, if it exists - To be implemented at a later date
+        debug (bool): Adds the output of the final dwell 2 time refinement step to the returned data
 
     Returns:
         dict: Dictionary of results information
-        ndarray: Numpy array of maximum, mean, and minimum temperatures for each simulation generated, within the last
-            `t_backoff` duration (e.g. the last two thirds of `duration`).
+        ndarray: If debug==True, Numpy array of maximum, mean, and minimum temperatures for each simulation generated,
+            within the last `t_backoff` duration (e.g. the last two thirds of `duration`) for the final refinement step.
 
     """
 
     datesecs = DateTime(date).secs
+    limit_type = limit_type.lower()
 
     if max_dwell is None:
         # This ensures three "cycles" of the two dwell states, within the portion of the schedule used for evaluation
@@ -397,15 +383,11 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     opt_fun = create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_spec, init,
                              t_backoff, duration)
 
-    # dwell2_range = np.logspace(1.0e-6, 1, n_dwells, endpoint=True) / n_dwells
-    # dwell2_range = max_dwell * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
-    # output = np.array([opt_fun(t) for t in dwell2_range],
-    #                   dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64), ('min', np.float64)])
-
+    # First just check the bounds to avoid unnecessary runs of `opt_fun`
     output = np.array([opt_fun(t) for t in [1.0e-6, max_dwell]],
                       dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64), ('min', np.float64)])
 
-    if 'max' in limit_type.lower():
+    if 'max' in limit_type:
 
         if np.all(output['max'] < limit):
             results['dwell_2_time'] = np.nan
@@ -480,7 +462,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
             results['converged'] = True
 
-    elif 'min' in limit_type.lower():
+    elif 'min' in limit_type:
 
         if np.all(output['min'] < limit):
             results['dwell_2_time'] = np.nan
@@ -565,11 +547,14 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         results['hotter_state'] = 2
         results['colder_state'] = 1
 
-    return results, output
+    if debug:
+        return results, output
+    else:
+        return results
 
 
-def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, limit_type='max', max_dwell=None, n_dwells=10,
-                    pseudo=None, shared_data=None):
+def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state_pairs, state_pair_dtype,
+                    limit_type='max', max_dwell=None, n_dwells=10, shared_data=None):
     """ Determine dwell balance times for a set of cases.
 
     Args:
@@ -579,14 +564,15 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, limit_type
         limit (float): Temperature limit for primary MSID in model for this simulation
         date (float, int, str): Date for start of simulation, in seconds from '1997:365:23:58:56.816', or any other
             format readable by Chandra.Time.DateTime
+        dwell_1_duration (float, int): Duration in seconds of dwell 1, also viewed as the known or defined dwell
+            duration, for which one wants to find a complementary dwell duration (dwell duration 2)
         state_pairs: Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states, see
             state_pair section below for further details
+        state_pair_dtype (dict): Dictionary listing Xija input names and their corresponding data type. For example,
+            {'pitch': np.float64, 'ccd_count': np.int8, 'vid_board': True}
         limit_type (str): Type of limit, defaults to 'max' (a maximum temperature limit), other option is 'min'
         max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
         n_dwells (int): Number of second dwell possibilities to run (more dwells = finer resolution)
-        pseudo (:obj:`str`, optional): Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
-            wishes to retrieve model results for this pseudo node, if it exists - To be implemented at a later date,
-            not currently used
         shared_data (list): Shared list of results, used when running multiple `run_state_pairs` threads in parallel via
             the multiprocessing package
 
@@ -595,52 +581,38 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, limit_type
 
 
     State Pairs Data Structure:
-        The first dictionary in the pair has the following structure, the minimum fields required are shown:
-        sequence1: Numerical value to identify the first dwell segment, can be user defined, does not need to match
-            LTS value
-        obsid1: Obsid for first dwell segment
-        duration1_fraction: The fraction of total time for this Obsid in the current week represented by 'duration1'
-        duration1: Fixed dwell time for first dwell segment
-        pitch: Pitch for first dwell segment
-
-        The second dictionary in the pair has the following structure, the minimum fields required are shown:
-        sequence2: Numerical value to identify the second dwell segment, can be user defined, does not need to match
-            LTS value
-        obsid2: Obsid for second dwell segment
-        pitch: Pitch for second dwell segment
+        The state pairs data structure, `state_pairs`, are pairs of dictionaries specifying the two conditions used for
+        a Timbre simulation. The keys in these dictionaries must match the Xija component names they refer to (e.g.
+        'pitch', 'ccd_count', 'cossrbx_on', etc.).
 
         State information that does not change from dwell1 to dwell2 can be specified in the model initialization
-        dictionary. State information that does change from dwell1 to dwell2 should be specified in the state pairs
-        dictionary described above. Dictionary names for states should match those expected by Xija (e.g. fep_count,
+        dictionary. `init`. State information that does change from dwell1 to dwell2 should be specified in the state
+        pairs dictionary described above. Dictionary names for states should match those expected by Xija (e.g. fep_count,
         roll, sim_z).
 
 
     Example:
 
-        model_init = {'aacccdpt': {'aacccdpt': -10., 'aca0': -10., 'eclipse': False}, }
+        model_init = {'aacccdpt': {'aacccdpt': -7., 'aca0': -7., 'eclipse': False}, }
 
         model_specs = load_model_specs()
-        date = '2019:001:00:00:00'
+        date = '2021:001:00:00:00'
         t_dwell1 = 20000.
         msid = 'aacccdpt'
-        limit = -9.5
+        limit = -7.1
 
-        state_pairs = (({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
-                         'pitch': 144.2}, {'sequence2': 2000, 'obsid2': 22222, 'pitch': 154.95}),
-                       ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
-                          'pitch': 90.2}, {'sequence2': 3000, 'obsid2': 33333,'pitch': 148.95}),
-                       ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
-                          'pitch': 50}, {'sequence2': 4000, 'obsid2': 44444,'pitch': 140}),
-                       ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
-                          'pitch': 90}, {'sequence2': 5000, 'obsid2': 55555,'pitch': 100}),
-                       ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
-                          'pitch': 75}, {'sequence2': 6000, 'obsid2': 66666,'pitch': 130}),
-                       ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
-                          'pitch': 170}, {'sequence2': 7000, 'obsid2': 77777,'pitch': 90}),
-                       ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1,
-                          'pitch': 90}, {'sequence2': 8000, 'obsid2': 88888,'pitch': 170}))
+        state_pairs = (({'pitch': 144.2}, {'pitch': 154.95}),
+                       ({'pitch': 90.2}, {'pitch': 148.95}),
+                       ({'pitch': 50}, {'pitch': 140}),
+                       ({'pitch': 90}, {'pitch': 100}),
+                       ({'pitch': 75}, {'pitch': 130}),
+                       ({'pitch': 170}, {'pitch': 90}),
+                       ({'pitch': 90}, {'pitch': 170}))
 
-        results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, state_pairs)
+        state_pair_dtype = {'pitch', np.float64}
+
+        results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs,
+            state_pair_dtype)
 
     """
 
@@ -660,60 +632,40 @@ def run_state_pairs(msid, model_spec, init, limit, date, state_pairs, limit_type
         dwell1_state = pair[0]
         dwell2_state = pair[1]
 
-        # These need to be pulled out of the dwell state data structures, otherwise they will cause errors later when
-        # constructing the state "schedule".
-        duration1 = dwell1_state.pop('duration1')
-        duration1_fraction = dwell1_state.pop('duration1_fraction')
-        sequence1 = dwell1_state.pop('sequence1')
-        obsid1 = dwell1_state.pop('obsid1')
+        dwell_results = find_second_dwell(date, dwell1_state, dwell2_state, dwell_1_duration, msid, limit, model_spec,
+                                          init, limit_type=limit_type, duration=duration, t_backoff=t_backoff,
+                                          n_dwells=n_dwells, max_dwell=max_dwell, pseudo=None)
 
-        sequence2 = dwell2_state.pop('sequence2')
-        obsid2 = dwell2_state.pop('obsid2')
-
-        dwell_results, output = find_second_dwell(date, dwell1_state, dwell2_state, duration1, msid, limit, model_spec,
-                                                  init, limit_type=limit_type, duration=duration, t_backoff=t_backoff,
-                                                  n_dwells=n_dwells, max_dwell=max_dwell, pseudo=None)
-
-        row = (msid,
-               datestr,
+        row = [msid.encode('utf-8'),
+               datestr.encode('utf-8'),
                datesecs,
-               obsid1,
-               sequence1,
-               duration1_fraction,
-               obsid2,
-               sequence2,
                limit,
-               dwell1_state['pitch'],
-               dwell2_state['pitch'],
-               dwell1_state['roll'] if 'roll' in dwell1_state else 0,
-               dwell2_state['roll'] if 'roll' in dwell1_state else 0,
-               dwell1_state['ccd_count'] if 'ccd_count' in dwell1_state else 0,
-               dwell2_state['ccd_count'] if 'ccd_count' in dwell1_state else 0,
-               dwell1_state['fep_count'] if 'fep_count' in dwell1_state else 0,
-               dwell2_state['fep_count'] if 'fep_count' in dwell1_state else 0,
-               dwell1_state['clocking'] if 'clocking' in dwell1_state else 0,
-               dwell2_state['clocking'] if 'clocking' in dwell1_state else 0,
-               dwell1_state['vid_board'] if 'vid_board' in dwell1_state else 0,
-               dwell2_state['vid_board'] if 'vid_board' in dwell1_state else 0,
-               dwell1_state['sim_z'] if 'sim_z' in dwell1_state else 0,
-               dwell2_state['sim_z'] if 'sim_z' in dwell1_state else 0,
-               duration1,
-               dwell_results['dwell_2_time'],
-               dwell_results['min_temp'],
-               dwell_results['mean_temp'],
-               dwell_results['max_temp'],
-               dwell_results['min_pseudo'],
-               dwell_results['mean_pseudo'],
-               dwell_results['max_pseudo'],
+               dwell_1_duration,
+               dwell_results['dwell_2_time'].item() if type(dwell_results['dwell_2_time']) is np.ndarray else dwell_results['dwell_2_time'],
+               dwell_results['min_temp'].item()if type(dwell_results['min_temp']) is np.ndarray else dwell_results['min_temp'],
+               dwell_results['mean_temp'].item() if type(dwell_results['mean_temp']) is np.ndarray else dwell_results['mean_temp'],
+               dwell_results['max_temp'].item() if type(dwell_results['max_temp']) is np.ndarray else dwell_results['max_temp'],
+               dwell_results['min_pseudo'].item() if type(dwell_results['min_pseudo']) is np.ndarray else dwell_results['min_pseudo'],
+               dwell_results['mean_pseudo'].item() if type(dwell_results['mean_pseudo']) is np.ndarray else dwell_results['mean_pseudo'],
+               dwell_results['max_pseudo'].item() if type(dwell_results['max_pseudo']) is np.ndarray else dwell_results['max_pseudo'],
                dwell_results['converged'],
                dwell_results['unconverged_hot'],
                dwell_results['unconverged_cold'],
                dwell_results['hotter_state'],
-               dwell_results['colder_state'])
+               dwell_results['colder_state']]
 
-        results.append(row)
+        input_dtypes = []
+        for key, value in dwell1_state.items():
+            row.append(value)
+            input_dtypes.append((key + '1', state_pair_dtype[key]))
 
-    results = np.array(results, dtype=results_dtype)
+        for key, value in dwell2_state.items():
+            row.append(value)
+            input_dtypes.append((key + '2', state_pair_dtype[key]))
+
+        results.append(tuple(row))
+
+    results = np.array(results, dtype=results_dtype + input_dtypes)
 
     if shared_data is not None:
         shared_data.append(results)
@@ -725,7 +677,7 @@ if __name__ == '__main__':
 
     t1 = DateTime().secs
 
-    model_init = {'aacccdpt': {'aacccdpt': -10., 'aca0': -10., 'eclipse': False},
+    model_init = {'aacccdpt': {'aacccdpt': -7., 'aca0': -7., 'eclipse': False},
                   'pftank2t': {'pftank2t': f_to_c(95.), 'pf0tank2t': f_to_c(95.), 'eclipse': False},
                   'tcylaft6': {'tcylaft6': f_to_c(120.), 'cc0': f_to_c(120.), 'eclipse': False},
                   '4rt700t': {'4rt700t': f_to_c(95.), 'oba0': f_to_c(95.), 'eclipse': False},
@@ -736,21 +688,23 @@ if __name__ == '__main__':
 
     model_specs = load_model_specs()
 
-    date = '2019:001:00:00:00'
-    scale_factor = 1000.
+    date = '2021:001:00:00:00'
     t_dwell1 = 20000.
-
     msid = 'aacccdpt'
-    limit = -9.5
+    limit = -7.1
 
-    state_pairs = (({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1, 'pitch': 144.2}, {'sequence2': 2000, 'obsid2': 22222, 'pitch': 154.95}),
-                   ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1, 'pitch': 90.2}, {'sequence2': 3000, 'obsid2': 33333,'pitch': 148.95}),
-                   ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1, 'pitch': 50}, {'sequence2': 4000, 'obsid2': 44444,'pitch': 140}),
-                   ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1, 'pitch': 90}, {'sequence2': 5000, 'obsid2': 55555,'pitch': 100}),
-                   ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1, 'pitch': 75}, {'sequence2': 6000, 'obsid2': 66666,'pitch': 130}),
-                   ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1, 'pitch': 170}, {'sequence2': 7000, 'obsid2': 77777,'pitch': 90}),
-                   ({'sequence1': 1000, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': t_dwell1, 'pitch': 90}, {'sequence2': 8000, 'obsid2': 88888,'pitch': 170}))
-    results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, state_pairs, n_dwells=20)
+    state_pairs = (({'pitch': 144.2}, {'pitch': 154.95}),
+                   ({'pitch': 90.2}, {'pitch': 148.95}),
+                   ({'pitch': 50}, {'pitch': 140}),
+                   ({'pitch': 90}, {'pitch': 100}),
+                   ({'pitch': 75}, {'pitch': 130}),
+                   ({'pitch': 170}, {'pitch': 90}),
+                   ({'pitch': 90}, {'pitch': 170}))
+
+    state_pair_dtype = {'pitch': np.float64}
+
+    results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs,
+                              state_pair_dtype)
 
     print(results)
     print('MD5 sum for ACA model: {}'.format(model_specs['aacccdpt_hash']))
@@ -759,11 +713,11 @@ if __name__ == '__main__':
 
     print('\nRunning {} state pairs tooks {} seconds'.format(len(state_pairs), t2 - t1))
 
-    pair = {'sequence1': 1, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': 30000, 'pitch': 155, 'roll': 10,
-            'ccd_count': 4, 'fep_count': 4, 'vid_board': 1, 'clocking': 1}, {'sequence2': 2, 'obsid2': 22222,
-                                                                             'pitch': 155, 'roll': 10, 'ccd_count': 4,
-                                                                             'fep_count': 4, 'vid_board': 1,
-                                                                             'clocking': 1}
+    # pair = {'sequence1': 1, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': 30000, 'pitch': 155, 'roll': 10,
+    #         'ccd_count': 4, 'fep_count': 4, 'vid_board': 1, 'clocking': 1}, {'sequence2': 2, 'obsid2': 22222,
+    #                                                                          'pitch': 155, 'roll': 10, 'ccd_count': 4,
+    #                                                                          'fep_count': 4, 'vid_board': 1,
+    #                                                                          'clocking': 1}
     # model_specs = load_model_specs()
     # msid = '1dpamzt'
     # # limit = 36.5
