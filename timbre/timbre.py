@@ -35,7 +35,7 @@ results_dtype = [('msid', utf8_type_20),
                  ('colder_state', np.int8)]
 
 pseudo_names = dict(
-    zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', None]))
+    zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', 'dea0']))
 
 
 def load_model_specs():
@@ -333,7 +333,7 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
 
 
 def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, model_spec, init, limit_type='max',
-                      duration=2592000, t_backoff=1725000, n_dwells=10., max_dwell=None, pseudo=None):
+                      duration=2592000, t_backoff=1725000, n_dwells=10., max_dwell=None, pseudo=None, debug=False):
     """ Determine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1, if any exists.
 
     Args:
@@ -354,15 +354,17 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
         pseudo (:obj:`str`, optional): Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
             wishes to retrieve model results for this pseudo node, if it exists - To be implemented at a later date
+        debug (bool): Adds the output of the final dwell 2 time refinement step to the returned data
 
     Returns:
         dict: Dictionary of results information
-        ndarray: Numpy array of maximum, mean, and minimum temperatures for each simulation generated, within the last
-            `t_backoff` duration (e.g. the last two thirds of `duration`).
+        ndarray: If debug==True, Numpy array of maximum, mean, and minimum temperatures for each simulation generated,
+            within the last `t_backoff` duration (e.g. the last two thirds of `duration`) for the final refinement step.
 
     """
 
     datesecs = DateTime(date).secs
+    limit_type = limit_type.lower()
 
     if max_dwell is None:
         # This ensures three "cycles" of the two dwell states, within the portion of the schedule used for evaluation
@@ -381,10 +383,11 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     opt_fun = create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_spec, init,
                              t_backoff, duration)
 
+    # First just check the bounds to avoid unnecessary runs of `opt_fun`
     output = np.array([opt_fun(t) for t in [1.0e-6, max_dwell]],
                       dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64), ('min', np.float64)])
 
-    if 'max' in limit_type.lower():
+    if 'max' in limit_type:
 
         if np.all(output['max'] < limit):
             results['dwell_2_time'] = np.nan
@@ -459,7 +462,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
             results['converged'] = True
 
-    elif 'min' in limit_type.lower():
+    elif 'min' in limit_type:
 
         if np.all(output['min'] < limit):
             results['dwell_2_time'] = np.nan
@@ -544,7 +547,10 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         results['hotter_state'] = 2
         results['colder_state'] = 1
 
-    return results, output
+    if debug:
+        return results, output
+    else:
+        return results
 
 
 def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state_pairs, state_pair_dtype,
@@ -626,10 +632,9 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
         dwell1_state = pair[0]
         dwell2_state = pair[1]
 
-        dwell_results, output = find_second_dwell(date, dwell1_state, dwell2_state, dwell_1_duration, msid, limit,
-                                                  model_spec, init, limit_type=limit_type, duration=duration,
-                                                  t_backoff=t_backoff,  n_dwells=n_dwells, max_dwell=max_dwell,
-                                                  pseudo=None)
+        dwell_results = find_second_dwell(date, dwell1_state, dwell2_state, dwell_1_duration, msid, limit, model_spec,
+                                          init, limit_type=limit_type, duration=duration, t_backoff=t_backoff,
+                                          n_dwells=n_dwells, max_dwell=max_dwell, pseudo=None)
 
         row = [msid.encode('utf-8'),
                datestr.encode('utf-8'),
