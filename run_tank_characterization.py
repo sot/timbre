@@ -78,7 +78,7 @@ def save_results_to_hdf5(filename, results_array):
     results_array = results_array[ind]
     with h5py.File(filename, 'w') as f:
         dset = f.create_dataset('results', (np.shape(results_array)), dtype=results_dtype)
-        dset[...] = results
+        dset[...] = results_array
         f.flush()
 
 
@@ -129,12 +129,12 @@ def run_cases(msid_name, model_specification, model_md5, initial_params, dwell1_
                 filename = f'{msid_name}_{model_md5}_{datestamp}_{date_str}_save_{k}.h5'
                 save_results_to_hdf5(filename, results_array)
 
-                print('Completed {}, limit={} on {}'.format(date, limit, DateTime().caldate))
+                print(f'Completed {date_str}, limit={limit_celsius}, dwell1 times={sets} on {DateTime().caldate}')
 
 
 if __name__ == "__main__":
 
-    model_spec, model_hash = get_local_model('/Users/mdahmer/AXAFLIB/chandra_models/xija/pftank2t/pftank2t_spec.json')
+    model_spec, model_hash = get_local_model('/Users/mdahmer/AXAFLIB/chandra_models/chandra_models/xija/pftank2t/pftank2t_spec.json')
     msid = 'pftank2t'
     datestamp = DateTime().caldate[:9]
     init = {'pftank2t': -8, 'pf0tank2t': -8, 'eclipse': False}
@@ -160,6 +160,6 @@ if __name__ == "__main__":
 
     print(f'Starting Timbre simulations on {DateTime().caldate}')
 
-    run_cases(msid, model_spec, model_hash, init, run_sets, state_pairs, state_pair_dtype, cases)
+    run_cases(msid, model_spec, model_hash, init, run_sets, state_pairs, results_dtype, cases)
 
     print(f'Completed all Timbre simulations on {DateTime().caldate}')

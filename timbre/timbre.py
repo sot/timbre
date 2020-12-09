@@ -11,8 +11,6 @@ from Chandra.Time import DateTime
 import xija
 
 import h5py
-utf8_type_20 = h5py.string_dtype('utf-8', 20)
-utf8_type_8 = h5py.string_dtype('utf-8', 8)
 
 pseudo_names = dict(
     zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', 'dea0']))
@@ -665,15 +663,19 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
 
         results.append(tuple(row))
 
-    results = np.array(results, dtype=state_pair_dtype)
+    results_array = np.array(results, dtype=state_pair_dtype)
 
     if shared_data is not None:
-        shared_data.append(results)
+        shared_data.append(results_array)
     else:
-        return results
+        return results_array
 
 
 if __name__ == '__main__':
+
+    utf8_type_20 = h5py.string_dtype('utf-8', 20)
+    utf8_type_8 = h5py.string_dtype('utf-8', 8)
+
     results_dtype = [('msid', utf8_type_20),
                      ('date', utf8_type_8),
                      ('datesecs', np.float64),
