@@ -14,26 +14,6 @@ import h5py
 utf8_type_20 = h5py.string_dtype('utf-8', 20)
 utf8_type_8 = h5py.string_dtype('utf-8', 8)
 
-home = expanduser("~")
-
-results_dtype = [('msid', utf8_type_20),
-                 ('date', utf8_type_8),
-                 ('datesecs', np.float64),
-                 ('limit', np.float64),
-                 ('t_dwell1', np.float64),
-                 ('t_dwell2', np.float64),
-                 ('min_temp', np.float64),
-                 ('mean_temp', np.float64),
-                 ('max_temp', np.float64),
-                 ('min_pseudo', np.float64),
-                 ('mean_pseudo', np.float64),
-                 ('max_pseudo', np.float64),
-                 ('converged', np.bool),
-                 ('unconverged_hot', np.bool),
-                 ('unconverged_cold', np.bool),
-                 ('hotter_state', np.int8),
-                 ('colder_state', np.int8)]
-
 pseudo_names = dict(
     zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', 'dea0']))
 
@@ -41,8 +21,7 @@ pseudo_names = dict(
 def load_model_specs():
     """ Load Xija model parameters for all available models.
 
-    Returns:
-        dictionary: A dictionary containing the model specifications for all available Xija models
+    :return: A dictionary containing the model specifications for all available Xija models
 
     Note:
         This will need to be updated as new models are approved or existing models are renamed.
@@ -71,13 +50,13 @@ def load_model_specs():
                 response = url.read()
                 f = response.decode('utf-8')
         else:
+            home = expanduser("~")
             with open(home + local_dir + branch) as fid:  # 'aca/aca_spec.json', 'rb') as fid:
                 f = fid.read()
 
         md5_hash = md5(f.encode('utf-8')).hexdigest()
 
         return json.loads(f), md5_hash
-
 
     model_specs = {}
 
@@ -400,7 +379,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
         # Temperatures straddle the limit, so a refined dwell 2 time is possible.
         else:
-            results, output = _refine_dwell2_time('max', n_dwells, max_dwell, opt_fun, results)
+            results, output = _refine_dwell2_time('max', n_dwells, max_dwell, limit, opt_fun, results)
 
     elif 'min' in limit_type:
 
@@ -414,7 +393,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
         # Temperatures straddle the limit, so a refined dwell 2 time is possible.
         else:
-            results, output = _refine_dwell2_time('min', n_dwells, max_dwell, opt_fun, results)
+            results, output = _refine_dwell2_time('min', n_dwells, max_dwell, limit, opt_fun, results)
 
     if output['max'][0] > output['max'][-1]:
         results['hotter_state'] = 1
@@ -482,7 +461,7 @@ def _handle_unconverged_cold(output, results):
     return results
 
 
-def _refine_dwell2_time(limit_type, n_dwells, max_dwell, opt_fun, results):
+def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results):
     """ Refine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1.
 
     This is intended to be run solely by find_second_dwell() to refine the amount of dwell 2 time is necessary to
@@ -494,6 +473,7 @@ def _refine_dwell2_time(limit_type, n_dwells, max_dwell, opt_fun, results):
             string passed to this argument
         n_dwells (int): Number of second dwell possibilities to run (more dwells = finer resolution)
         max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
+        limit (float): Limit in Celsius for current simulation
         opt_fun (function): Function that runs the schedule defined by dwell1_state and dwell2_state
         results (dict): Results dictionary initialized in parent function
 
@@ -585,8 +565,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
             duration, for which one wants to find a complementary dwell duration (dwell duration 2)
         state_pairs: Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states, see
             state_pair section below for further details
-        state_pair_dtype (dict): Dictionary listing Xija input names and their corresponding data type. For example,
-            {'pitch': np.float64, 'ccd_count': np.int8, 'vid_board': True}
+        state_pair_dtype (list): List of name + Numpy data type pairs for each simulation
         limit_type (str): Type of limit, defaults to 'max' (a maximum temperature limit), other option is 'min'
         max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
         n_dwells (int): Number of second dwell possibilities to run (more dwells = finer resolution)
@@ -604,8 +583,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
 
         State information that does not change from dwell1 to dwell2 can be specified in the model initialization
         dictionary. `init`. State information that does change from dwell1 to dwell2 should be specified in the state
-        pairs dictionary described above. Dictionary names for states should match those expected by Xija (e.g. fep_count,
-        roll, sim_z).
+        pairs dictionary described above. Dictionary names for states should match those expected by Xija (e.g.
+        fep_count, roll, sim_z).
 
 
     Example:
@@ -658,31 +637,35 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                datesecs,
                limit,
                dwell_1_duration,
-               dwell_results['dwell_2_time'].item() if type(dwell_results['dwell_2_time']) is np.ndarray else dwell_results['dwell_2_time'],
-               dwell_results['min_temp'].item()if type(dwell_results['min_temp']) is np.ndarray else dwell_results['min_temp'],
-               dwell_results['mean_temp'].item() if type(dwell_results['mean_temp']) is np.ndarray else dwell_results['mean_temp'],
-               dwell_results['max_temp'].item() if type(dwell_results['max_temp']) is np.ndarray else dwell_results['max_temp'],
-               dwell_results['min_pseudo'].item() if type(dwell_results['min_pseudo']) is np.ndarray else dwell_results['min_pseudo'],
-               dwell_results['mean_pseudo'].item() if type(dwell_results['mean_pseudo']) is np.ndarray else dwell_results['mean_pseudo'],
-               dwell_results['max_pseudo'].item() if type(dwell_results['max_pseudo']) is np.ndarray else dwell_results['max_pseudo'],
+               dwell_results['dwell_2_time'].item() if type(dwell_results['dwell_2_time']) is np.ndarray else
+               dwell_results['dwell_2_time'],
+               dwell_results['min_temp'].item() if type(dwell_results['min_temp']) is np.ndarray else dwell_results[
+                   'min_temp'],
+               dwell_results['mean_temp'].item() if type(dwell_results['mean_temp']) is np.ndarray else dwell_results[
+                   'mean_temp'],
+               dwell_results['max_temp'].item() if type(dwell_results['max_temp']) is np.ndarray else dwell_results[
+                   'max_temp'],
+               dwell_results['min_pseudo'].item() if type(dwell_results['min_pseudo']) is np.ndarray else dwell_results[
+                   'min_pseudo'],
+               dwell_results['mean_pseudo'].item() if type(dwell_results['mean_pseudo']) is np.ndarray else
+               dwell_results['mean_pseudo'],
+               dwell_results['max_pseudo'].item() if type(dwell_results['max_pseudo']) is np.ndarray else dwell_results[
+                   'max_pseudo'],
                dwell_results['converged'],
                dwell_results['unconverged_hot'],
                dwell_results['unconverged_cold'],
                dwell_results['hotter_state'],
                dwell_results['colder_state']]
 
-        input_dtypes = []
         for key, value in dwell1_state.items():
             row.append(value)
-            input_dtypes.append((key + '1', state_pair_dtype[key]))
 
         for key, value in dwell2_state.items():
             row.append(value)
-            input_dtypes.append((key + '2', state_pair_dtype[key]))
 
         results.append(tuple(row))
 
-    results = np.array(results, dtype=results_dtype + input_dtypes)
+    results = np.array(results, dtype=state_pair_dtype)
 
     if shared_data is not None:
         shared_data.append(results)
@@ -691,6 +674,23 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
 
 
 if __name__ == '__main__':
+    results_dtype = [('msid', utf8_type_20),
+                     ('date', utf8_type_8),
+                     ('datesecs', np.float64),
+                     ('limit', np.float64),
+                     ('t_dwell1', np.float64),
+                     ('t_dwell2', np.float64),
+                     ('min_temp', np.float64),
+                     ('mean_temp', np.float64),
+                     ('max_temp', np.float64),
+                     ('min_pseudo', np.float64),
+                     ('mean_pseudo', np.float64),
+                     ('max_pseudo', np.float64),
+                     ('converged', np.bool),
+                     ('unconverged_hot', np.bool),
+                     ('unconverged_cold', np.bool),
+                     ('hotter_state', np.int8),
+                     ('colder_state', np.int8)]
 
     t1 = DateTime().secs
 
@@ -700,8 +700,8 @@ if __name__ == '__main__':
                   '4rt700t': {'4rt700t': f_to_c(95.), 'oba0': f_to_c(95.), 'eclipse': False},
                   '1dpamzt': {'1dpamzt': 35., 'dpa0': 35., 'eclipse': False, 'vid_board': True, 'clocking': True,
                               'dpa_power': 0.0, 'sim_z': 100000},
-                  '1deamzt': {'1deamzt': 35., 'eclipse': False, 'vid_board': True, 'clocking': True, 'dpa_power': 0.0,
-                              'sim_z': 100000}}
+                  '1deamzt': {'1deamzt': 35., 'dea0': 35., 'eclipse': False, 'vid_board': True, 'clocking': True,
+                              'dpa_power': 0.0, 'sim_z': 100000}}
 
     model_specs = load_model_specs()
 
@@ -720,8 +720,14 @@ if __name__ == '__main__':
 
     state_pair_dtype = {'pitch': np.float64}
 
+    for key, value in state_pair_dtype.items():
+        results_dtype.append((key + '1', value))
+
+    for key, value in state_pair_dtype.items():
+        results_dtype.append((key + '2', value))
+
     results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs,
-                              state_pair_dtype)
+                              results_dtype)
 
     print(results)
     print('MD5 sum for ACA model: {}'.format(model_specs['aacccdpt_hash']))
@@ -730,16 +736,3 @@ if __name__ == '__main__':
 
     print('\nRunning {} state pairs tooks {} seconds'.format(len(state_pairs), t2 - t1))
 
-    # pair = {'sequence1': 1, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': 30000, 'pitch': 155, 'roll': 10,
-    #         'ccd_count': 4, 'fep_count': 4, 'vid_board': 1, 'clocking': 1}, {'sequence2': 2, 'obsid2': 22222,
-    #                                                                          'pitch': 155, 'roll': 10, 'ccd_count': 4,
-    #                                                                          'fep_count': 4, 'vid_board': 1,
-    #                                                                          'clocking': 1}
-    # model_specs = load_model_specs()
-    # msid = '1dpamzt'
-    # # limit = 36.5
-    # datestamp = DateTime().caldate[:9]
-    # init = {'1dpamzt': 37.5, 'dpa0': 37.5, 'eclipse': False, 'dpa_power': 0.0, 'sim_z': 100000}
-    # date = '2021:182:00:00:00'
-    # limit = 39.5
-    # run_state_pairs(msid, model_specs[msid], init, limit, date, [pair, ], max_dwell=200000)
