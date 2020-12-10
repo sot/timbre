@@ -11,28 +11,6 @@ from Chandra.Time import DateTime
 import xija
 
 import h5py
-utf8_type_20 = h5py.string_dtype('utf-8', 20)
-utf8_type_8 = h5py.string_dtype('utf-8', 8)
-
-home = expanduser("~")
-
-results_dtype = [('msid', utf8_type_20),
-                 ('date', utf8_type_8),
-                 ('datesecs', np.float64),
-                 ('limit', np.float64),
-                 ('t_dwell1', np.float64),
-                 ('t_dwell2', np.float64),
-                 ('min_temp', np.float64),
-                 ('mean_temp', np.float64),
-                 ('max_temp', np.float64),
-                 ('min_pseudo', np.float64),
-                 ('mean_pseudo', np.float64),
-                 ('max_pseudo', np.float64),
-                 ('converged', np.bool),
-                 ('unconverged_hot', np.bool),
-                 ('unconverged_cold', np.bool),
-                 ('hotter_state', np.int8),
-                 ('colder_state', np.int8)]
 
 pseudo_names = dict(
     zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', 'dea0']))
@@ -41,8 +19,7 @@ pseudo_names = dict(
 def load_model_specs():
     """ Load Xija model parameters for all available models.
 
-    Returns:
-        dictionary: A dictionary containing the model specifications for all available Xija models
+    :return: A dictionary containing the model specifications for all available Xija models
 
     Note:
         This will need to be updated as new models are approved or existing models are renamed.
@@ -71,13 +48,13 @@ def load_model_specs():
                 response = url.read()
                 f = response.decode('utf-8')
         else:
+            home = expanduser("~")
             with open(home + local_dir + branch) as fid:  # 'aca/aca_spec.json', 'rb') as fid:
                 f = fid.read()
 
         md5_hash = md5(f.encode('utf-8')).hexdigest()
 
         return json.loads(f), md5_hash
-
 
     model_specs = {}
 
@@ -333,7 +310,7 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
 
 
 def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, model_spec, init, limit_type='max',
-                      duration=2592000, t_backoff=1725000, n_dwells=10., max_dwell=None, pseudo=None, debug=False):
+                      duration=2592000, t_backoff=1725000, n_dwells=10., max_dwell=None, pseudo=None):
     """ Determine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1, if any exists.
 
     Args:
@@ -354,17 +331,18 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
         pseudo (:obj:`str`, optional): Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
             wishes to retrieve model results for this pseudo node, if it exists - To be implemented at a later date
-        debug (bool): Adds the output of the final dwell 2 time refinement step to the returned data
 
     Returns:
         dict: Dictionary of results information
-        ndarray: If debug==True, Numpy array of maximum, mean, and minimum temperatures for each simulation generated,
-            within the last `t_backoff` duration (e.g. the last two thirds of `duration`) for the final refinement step.
 
     """
 
     datesecs = DateTime(date).secs
-    limit_type = limit_type.lower()
+
+    if 'max' in limit_type.lower():
+        limit_type = 'max'
+    else:
+        limit_type = 'min'
 
     if max_dwell is None:
         # This ensures three "cycles" of the two dwell states, within the portion of the schedule used for evaluation
@@ -380,8 +358,8 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     # Ensure t_dwell1 is a float, may not be necessary anymore
     t_dwell1 = np.float(t_dwell1)
 
-    opt_fun = create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_spec, init,
-                             t_backoff, duration)
+    opt_fun = create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_spec, init, t_backoff,
+                             duration)
 
     # First just check the bounds to avoid unnecessary runs of `opt_fun`
     output = np.array([opt_fun(t) for t in [1.0e-6, max_dwell]],
@@ -389,156 +367,31 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
     if 'max' in limit_type:
 
+        # All cases report temperatures entirely below the limit.
         if np.all(output['max'] < limit):
-            results['dwell_2_time'] = np.nan
-            ind = np.argmax(output['max'])
-            results['max_temp'] = output['max'][ind]
-            results['min_temp'] = output['min'][ind]
-            results['mean_temp'] = output['mean'][ind]
-            results['converged'] = False
-            results['unconverged_cold'] = True
+            results = _handle_unconverged_cold(output, results)
 
+        # All cases report temperatures entirely above the limit.
         elif np.all(output['max'] > limit):
-            results['dwell_2_time'] = np.nan
-            ind = np.argmin(output['max'])
-            results['max_temp'] = output['max'][ind]
-            results['min_temp'] = output['min'][ind]
-            results['mean_temp'] = output['mean'][ind]
-            results['converged'] = False
-            results['unconverged_hot'] = True
+            results = _handle_unconverged_hot(output, results)
 
+        # Temperatures straddle the limit, so a refined dwell 2 time is possible.
         else:
-
-            # --------------------------------------------------------------------------------------------------------------
-            n_dwells_1 = n_dwells
-            dwell2_range = np.logspace(1.0e-6, 1, n_dwells_1, endpoint=True) / n_dwells_1
-            dwell2_range = max_dwell * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
-            output = np.array([opt_fun(t) for t in dwell2_range],
-                              dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
-                                     ('min', np.float64)])
-
-            output_sorted = np.sort(output, order='max') # low to high
-            ind = np.searchsorted(output_sorted['max'], limit)
-
-            if ind == 0:
-                # np.searchsorted finds the first suitable location by default, so if ind == 0, then the duration must
-                # fall at the bounded value. This is not true if ind == -1 (the last value).
-                results['max_temp'] = limit
-                results['dwell_2_time'] = output['duration2'][ind]
-                results['min_temp'] = output['min'][ind]
-                results['mean_temp'] = output['mean'][ind]
-                results['converged'] = True
-
-            else:
-                n_dwells_2 = n_dwells
-                t_bound = (output_sorted['duration2'][ind - 1], output_sorted['duration2'][ind])
-                dwell2_range = np.linspace(np.min(t_bound), np.max(t_bound), n_dwells_2, endpoint=True)
-                output = np.array([opt_fun(t) for t in dwell2_range],
-                                  dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
-                                         ('min', np.float64)])
-
-                # In rare conditions where all 'x' values are very close and 'wobble' a bit, it may not be sorted. If it
-                # is not sorted, the quadratic method will result in an error. It seems as if the linear method is more
-                # tolerant of this condition.
-                try:
-                    f_dwell_2_time = interpolate.interp1d(output['max'], output['duration2'], kind='quadratic',
-                                                          assume_sorted=False)
-                    f_min_temp = interpolate.interp1d(output['max'], output['min'], kind='quadratic',
-                                                      assume_sorted=False)
-                    f_mean_temp = interpolate.interp1d(output['max'], output['mean'], kind='quadratic',
-                                                       assume_sorted=False)
-                except ValueError:
-                    f_dwell_2_time = interpolate.interp1d(output['max'], output['duration2'], kind='linear',
-                                                          assume_sorted=False)
-                    f_min_temp = interpolate.interp1d(output['max'], output['min'], kind='linear',
-                                                      assume_sorted=False)
-                    f_mean_temp = interpolate.interp1d(output['max'], output['mean'], kind='linear',
-                                                       assume_sorted=False)
-
-                results['max_temp'] = limit
-                results['dwell_2_time'] = f_dwell_2_time(limit)
-                results['min_temp'] = f_min_temp(limit)
-                results['mean_temp'] = f_mean_temp(limit)
-
-            results['converged'] = True
+            results, output = _refine_dwell2_time('max', n_dwells, max_dwell, limit, opt_fun, results)
 
     elif 'min' in limit_type:
 
+        # All cases report temperatures entirely below the limit.
         if np.all(output['min'] < limit):
-            results['dwell_2_time'] = np.nan
-            ind = np.argmax(output['min'])
-            results['max_temp'] = output['max'][ind]
-            results['min_temp'] = output['min'][ind]
-            results['mean_temp'] = output['mean'][ind]
-            results['converged'] = False
-            results['unconverged_cold'] = True
+            results = _handle_unconverged_cold(output, results)
 
+        # All cases report temperatures entirely above the limit.
         elif np.all(output['min'] > limit):
-            results['dwell_2_time'] = np.nan
-            ind = np.argmin(output['min'])
-            results['max_temp'] = output['max'][ind]
-            results['min_temp'] = output['min'][ind]
-            results['mean_temp'] = output['mean'][ind]
-            results['converged'] = False
-            results['unconverged_hot'] = True
+            results = _handle_unconverged_hot(output, results)
 
+        # Temperatures straddle the limit, so a refined dwell 2 time is possible.
         else:
-
-            # ----------------------------------------------------------------------------------------------------------
-            n_dwells_1 = n_dwells
-            dwell2_range = np.logspace(1.0e-6, 1, n_dwells_1, endpoint=True) / n_dwells_1
-            dwell2_range = max_dwell * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
-            output = np.array([opt_fun(t) for t in dwell2_range],
-                              dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
-                                     ('min', np.float64)])
-
-            output_sorted = np.sort(output, order='min')  # low to high
-            ind = np.searchsorted(output_sorted['min'], limit)
-
-            if ind == 0:
-                # np.searchsorted finds the first suitable location by default, so if ind == 0, then the duration must
-                # fall at the bounded value. This is not true if ind == -1 (the last value).
-                results['min_temp'] = limit
-                results['dwell_2_time'] = output['duration2'][ind]
-                results['max_temp'] = output['max'][ind]
-                results['mean_temp'] = output['mean'][ind]
-                results['converged'] = True
-
-            else:
-                n_dwells_2 = n_dwells
-                t_bound = (output_sorted['duration2'][ind - 1], output_sorted['duration2'][ind])
-                dwell2_range = np.linspace(np.min(t_bound), np.max(t_bound), n_dwells_2, endpoint=True)
-                output = np.array([opt_fun(t) for t in dwell2_range],
-                                  dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
-                                         ('min', np.float64)])
-
-                # In rare conditions where all 'x' values are very close and 'wobble' a bit, it may not be sorted. If it
-                # is not sorted, the quadratic method will result in an error. It seems as if the linear method is more
-                # tolerant of this condition.
-                try:
-                    f_dwell_2_time = interpolate.interp1d(output['min'], output['duration2'], kind='quadratic',
-                                                          assume_sorted=False)
-                    f_max_temp = interpolate.interp1d(output['min'], output['max'], kind='quadratic',
-                                                      assume_sorted=False)
-                    f_mean_temp = interpolate.interp1d(output['min'], output['mean'], kind='quadratic',
-                                                       assume_sorted=False)
-
-                except ValueError:
-                    f_dwell_2_time = interpolate.interp1d(output['min'], output['duration2'], kind='linear',
-                                                          assume_sorted=False)
-                    f_max_temp = interpolate.interp1d(output['min'], output['max'], kind='linear',
-                                                      assume_sorted=False)
-                    f_mean_temp = interpolate.interp1d(output['min'], output['mean'], kind='linear',
-                                                       assume_sorted=False)
-
-                results['min_temp'] = limit
-                results['dwell_2_time'] = f_dwell_2_time(limit)
-                results['max_temp'] = f_max_temp(limit)
-                results['mean_temp'] = f_mean_temp(limit)
-
-            results['converged'] = True
-
-        # --------------------------------------------------------------------------------------------------------------
+            results, output = _refine_dwell2_time('min', n_dwells, max_dwell, limit, opt_fun, results)
 
     if output['max'][0] > output['max'][-1]:
         results['hotter_state'] = 1
@@ -547,10 +400,152 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         results['hotter_state'] = 2
         results['colder_state'] = 1
 
-    if debug:
-        return results, output
+    return results
+
+
+def _handle_unconverged_hot(output, results):
+    """ Record useful information for the case where all output remains above the limit.
+
+    This is intended to be run solely by find_second_dwell(). This modifies the `results` dictionary inherited from the
+    parent function to provide information about the case that came the closest to converging.
+
+    Args:
+        output (ndarray): Numpy array of maximum, mean, and minimum temperatures for each simulation generated, within
+            the last `t_backoff` duration (e.g. the last two thirds of `duration`) for the final refinement step.
+        results (dict): Results dictionary initialized in parent function
+
+    Returns:
+        dict: Dictionary of results information
+
+    """
+
+    # You want the data for the case that is closest to the limit, in this case that is the data with the min value.
+    ind = np.argmin(output['min'])
+    results['unconverged_hot'] = True
+    results['dwell_2_time'] = np.nan
+    results['max_temp'] = output['max'][ind]
+    results['min_temp'] = output['min'][ind]
+    results['mean_temp'] = output['mean'][ind]
+    results['converged'] = False
+
+    return results
+
+
+def _handle_unconverged_cold(output, results):
+    """ Record useful information for the case where all output remains below the limit.
+
+    This is intended to be run solely by find_second_dwell(). This modifies the `results` dictionary inherited from the
+    parent function to provide information about the case that came the closest to converging.
+
+    Args:
+        output (ndarray): Numpy array of maximum, mean, and minimum temperatures for each simulation generated, within
+            the last `t_backoff` duration (e.g. the last two thirds of `duration`) for the final refinement step.
+        results (dict): Results dictionary initialized in parent function
+
+    Returns:
+        dict: Dictionary of results information
+
+    """
+
+    # You want the data for the case that is closest to the limit, in this case that is the data with the max value.
+    ind = np.argmax(output['max'])
+    results['unconverged_cold'] = True
+    results['dwell_2_time'] = np.nan
+    results['max_temp'] = output['max'][ind]
+    results['min_temp'] = output['min'][ind]
+    results['mean_temp'] = output['mean'][ind]
+    results['converged'] = False
+
+    return results
+
+
+def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results):
+    """ Refine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1.
+
+    This is intended to be run solely by find_second_dwell() to refine the amount of dwell 2 time is necessary to
+    balance the dwell 1 time. This modifies the `results` dictionary inherited from the parent function, but also
+    returns the `output` ndarray containing data from the final refinement operation.
+
+    Args:
+        limit_type (str): Type of limit, either a minimum or maximum temperature limit (needs to have 'min' or 'max' in
+            string passed to this argument
+        n_dwells (int): Number of second dwell possibilities to run (more dwells = finer resolution)
+        max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
+        limit (float): Limit in Celsius for current simulation
+        opt_fun (function): Function that runs the schedule defined by dwell1_state and dwell2_state
+        results (dict): Results dictionary initialized in parent function
+
+    Returns:
+        dict: Dictionary of results information
+        ndarray: Numpy array of maximum, mean, and minimum temperatures for each simulation generated, within the last
+            `t_backoff` duration (e.g. the last two thirds of `duration`) for the final refinement step.
+
+    """
+
+    # This is the configuration for working with a max temperature limit (as opposed to a min temperature limit).
+    max_min = 'max'
+    min_max = 'min'
+
+    if 'min' in limit_type:
+        max_min = 'min'
+        min_max = 'max'
+
+    # dwell2_range defines the possible dwell 2 guesses, first defined in log space
+    dwell2_range = np.logspace(1.0e-6, 1, n_dwells, endpoint=True) / n_dwells
+    dwell2_range = max_dwell * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
+
+    # Run the dwell1_state-dwell2_state schedule using the possible dwell 2 guesses
+    output = np.array([opt_fun(t) for t in dwell2_range], dtype=[('duration2', np.float64), ('max', np.float64),
+                                                                 ('mean', np.float64), ('min', np.float64)])
+
+    # Ensure the results are sorted. Although dwell2_range will be sorted, the output may not when two or more dwell
+    # times are close, where temperature oscillations from instabilities in the Xija model can cause the results to lose
+    # this order.
+    #
+    # The column that is used to sort the results also depends on the limit type.
+    output_sorted = np.sort(output, order=max_min)
+    ind = np.searchsorted(output_sorted[max_min], limit)
+
+    if ind == 0:
+        # np.searchsorted finds the first suitable location by default, so if ind == 0, then the duration must
+        # fall at the bounded value. This is not true if ind == -1 (the last value).
+        results[max_min + '_temp'] = limit
+        results['dwell_2_time'] = output['duration2'][ind]
+        results[min_max + '_temp'] = output[min_max][ind]
+        results['mean_temp'] = output['mean'][ind]
+        results['converged'] = True
+
     else:
-        return results
+        t_bound = (output_sorted['duration2'][ind - 1], output_sorted['duration2'][ind])
+        dwell2_range = np.linspace(np.min(t_bound), np.max(t_bound), n_dwells, endpoint=True)
+        output = np.array([opt_fun(t) for t in dwell2_range],
+                          dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
+                                 ('min', np.float64)])
+
+        # In rare conditions where all 'x' values are very close and 'wobble' a bit, it may not be sorted. If it
+        # is not sorted, the quadratic method will result in an error. It seems as if the linear method is more
+        # tolerant of this condition.
+        try:
+            f_dwell_2_time = interpolate.interp1d(output[max_min], output['duration2'], kind='quadratic',
+                                                  assume_sorted=False)
+            f_non_limit_temp = interpolate.interp1d(output[max_min], output[min_max], kind='quadratic',
+                                                    assume_sorted=False)
+            f_mean_temp = interpolate.interp1d(output[max_min], output['mean'], kind='quadratic', assume_sorted=False)
+        except ValueError:
+            f_dwell_2_time = interpolate.interp1d(output[max_min], output['duration2'], kind='linear',
+                                                  assume_sorted=False)
+            f_non_limit_temp = interpolate.interp1d(output[max_min], output[min_max], kind='linear',
+                                                    assume_sorted=False)
+            f_mean_temp = interpolate.interp1d(output[max_min], output['mean'], kind='linear', assume_sorted=False)
+
+        results[max_min + '_temp'] = limit
+        results['dwell_2_time'] = f_dwell_2_time(limit)
+        results['mean_temp'] = f_mean_temp(limit)
+        results[min_max + '_temp'] = f_non_limit_temp(limit)
+
+    results['converged'] = True
+
+    return results, output
 
 
 def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state_pairs, state_pair_dtype,
@@ -568,8 +563,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
             duration, for which one wants to find a complementary dwell duration (dwell duration 2)
         state_pairs: Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states, see
             state_pair section below for further details
-        state_pair_dtype (dict): Dictionary listing Xija input names and their corresponding data type. For example,
-            {'pitch': np.float64, 'ccd_count': np.int8, 'vid_board': True}
+        state_pair_dtype (list): List of name + Numpy data type pairs for each simulation
         limit_type (str): Type of limit, defaults to 'max' (a maximum temperature limit), other option is 'min'
         max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
         n_dwells (int): Number of second dwell possibilities to run (more dwells = finer resolution)
@@ -587,8 +581,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
 
         State information that does not change from dwell1 to dwell2 can be specified in the model initialization
         dictionary. `init`. State information that does change from dwell1 to dwell2 should be specified in the state
-        pairs dictionary described above. Dictionary names for states should match those expected by Xija (e.g. fep_count,
-        roll, sim_z).
+        pairs dictionary described above. Dictionary names for states should match those expected by Xija (e.g.
+        fep_count, roll, sim_z).
 
 
     Example:
@@ -641,39 +635,64 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                datesecs,
                limit,
                dwell_1_duration,
-               dwell_results['dwell_2_time'].item() if type(dwell_results['dwell_2_time']) is np.ndarray else dwell_results['dwell_2_time'],
-               dwell_results['min_temp'].item()if type(dwell_results['min_temp']) is np.ndarray else dwell_results['min_temp'],
-               dwell_results['mean_temp'].item() if type(dwell_results['mean_temp']) is np.ndarray else dwell_results['mean_temp'],
-               dwell_results['max_temp'].item() if type(dwell_results['max_temp']) is np.ndarray else dwell_results['max_temp'],
-               dwell_results['min_pseudo'].item() if type(dwell_results['min_pseudo']) is np.ndarray else dwell_results['min_pseudo'],
-               dwell_results['mean_pseudo'].item() if type(dwell_results['mean_pseudo']) is np.ndarray else dwell_results['mean_pseudo'],
-               dwell_results['max_pseudo'].item() if type(dwell_results['max_pseudo']) is np.ndarray else dwell_results['max_pseudo'],
+               dwell_results['dwell_2_time'].item() if type(dwell_results['dwell_2_time']) is np.ndarray else
+               dwell_results['dwell_2_time'],
+               dwell_results['min_temp'].item() if type(dwell_results['min_temp']) is np.ndarray else dwell_results[
+                   'min_temp'],
+               dwell_results['mean_temp'].item() if type(dwell_results['mean_temp']) is np.ndarray else dwell_results[
+                   'mean_temp'],
+               dwell_results['max_temp'].item() if type(dwell_results['max_temp']) is np.ndarray else dwell_results[
+                   'max_temp'],
+               dwell_results['min_pseudo'].item() if type(dwell_results['min_pseudo']) is np.ndarray else dwell_results[
+                   'min_pseudo'],
+               dwell_results['mean_pseudo'].item() if type(dwell_results['mean_pseudo']) is np.ndarray else
+               dwell_results['mean_pseudo'],
+               dwell_results['max_pseudo'].item() if type(dwell_results['max_pseudo']) is np.ndarray else dwell_results[
+                   'max_pseudo'],
                dwell_results['converged'],
                dwell_results['unconverged_hot'],
                dwell_results['unconverged_cold'],
                dwell_results['hotter_state'],
                dwell_results['colder_state']]
 
-        input_dtypes = []
         for key, value in dwell1_state.items():
             row.append(value)
-            input_dtypes.append((key + '1', state_pair_dtype[key]))
 
         for key, value in dwell2_state.items():
             row.append(value)
-            input_dtypes.append((key + '2', state_pair_dtype[key]))
 
         results.append(tuple(row))
 
-    results = np.array(results, dtype=results_dtype + input_dtypes)
+    results_array = np.array(results, dtype=state_pair_dtype)
 
     if shared_data is not None:
-        shared_data.append(results)
+        shared_data.append(results_array)
     else:
-        return results
+        return results_array
 
 
 if __name__ == '__main__':
+
+    utf8_type_20 = h5py.string_dtype('utf-8', 20)
+    utf8_type_8 = h5py.string_dtype('utf-8', 8)
+
+    results_dtype = [('msid', utf8_type_20),
+                     ('date', utf8_type_8),
+                     ('datesecs', np.float64),
+                     ('limit', np.float64),
+                     ('t_dwell1', np.float64),
+                     ('t_dwell2', np.float64),
+                     ('min_temp', np.float64),
+                     ('mean_temp', np.float64),
+                     ('max_temp', np.float64),
+                     ('min_pseudo', np.float64),
+                     ('mean_pseudo', np.float64),
+                     ('max_pseudo', np.float64),
+                     ('converged', np.bool),
+                     ('unconverged_hot', np.bool),
+                     ('unconverged_cold', np.bool),
+                     ('hotter_state', np.int8),
+                     ('colder_state', np.int8)]
 
     t1 = DateTime().secs
 
@@ -683,8 +702,8 @@ if __name__ == '__main__':
                   '4rt700t': {'4rt700t': f_to_c(95.), 'oba0': f_to_c(95.), 'eclipse': False},
                   '1dpamzt': {'1dpamzt': 35., 'dpa0': 35., 'eclipse': False, 'vid_board': True, 'clocking': True,
                               'dpa_power': 0.0, 'sim_z': 100000},
-                  '1deamzt': {'1deamzt': 35., 'eclipse': False, 'vid_board': True, 'clocking': True, 'dpa_power': 0.0,
-                              'sim_z': 100000}}
+                  '1deamzt': {'1deamzt': 35., 'dea0': 35., 'eclipse': False, 'vid_board': True, 'clocking': True,
+                              'dpa_power': 0.0, 'sim_z': 100000}}
 
     model_specs = load_model_specs()
 
@@ -703,8 +722,14 @@ if __name__ == '__main__':
 
     state_pair_dtype = {'pitch': np.float64}
 
+    for key, value in state_pair_dtype.items():
+        results_dtype.append((key + '1', value))
+
+    for key, value in state_pair_dtype.items():
+        results_dtype.append((key + '2', value))
+
     results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs,
-                              state_pair_dtype)
+                              results_dtype)
 
     print(results)
     print('MD5 sum for ACA model: {}'.format(model_specs['aacccdpt_hash']))
@@ -713,16 +738,3 @@ if __name__ == '__main__':
 
     print('\nRunning {} state pairs tooks {} seconds'.format(len(state_pairs), t2 - t1))
 
-    # pair = {'sequence1': 1, 'obsid1': 99999, 'duration1_fraction': 1.0, 'duration1': 30000, 'pitch': 155, 'roll': 10,
-    #         'ccd_count': 4, 'fep_count': 4, 'vid_board': 1, 'clocking': 1}, {'sequence2': 2, 'obsid2': 22222,
-    #                                                                          'pitch': 155, 'roll': 10, 'ccd_count': 4,
-    #                                                                          'fep_count': 4, 'vid_board': 1,
-    #                                                                          'clocking': 1}
-    # model_specs = load_model_specs()
-    # msid = '1dpamzt'
-    # # limit = 36.5
-    # datestamp = DateTime().caldate[:9]
-    # init = {'1dpamzt': 37.5, 'dpa0': 37.5, 'eclipse': False, 'dpa_power': 0.0, 'sim_z': 100000}
-    # date = '2021:182:00:00:00'
-    # limit = 39.5
-    # run_state_pairs(msid, model_specs[msid], init, limit, date, [pair, ], max_dwell=200000)
