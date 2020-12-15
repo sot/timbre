@@ -2,66 +2,13 @@ import sys
 from os.path import expanduser
 from multiprocessing import Process, Manager
 import logging
+import h5py
 
 logging.getLogger("xija").setLevel(logging.WARNING)
 
 home = expanduser("~")
 sys.path.append(home + '/AXAFLIB/timbre/')
 from timbre import *
-
-
-def get_full_dtype(state_pair_dtype_dict):
-    """ Add Numpy data types for parameters specific to model to the boilerplate array data types.
-
-    :param state_pair_dtype_dict: Dictionary of Numpy data types
-    :return: List of Numpy data types, including items specific to current model (e.g. pitch, roll, ccd_count, etc.)
-
-    Example input:
-        state_pair_dtype_dict = {'pitch': np.float64, 'roll': np.float64}
-
-    """
-
-    full_results_dtype = [('msid', utf8_type_20),
-                          ('date', utf8_type_8),
-                          ('datesecs', np.float64),
-                          ('limit', np.float64),
-                          ('t_dwell1', np.float64),
-                          ('t_dwell2', np.float64),
-                          ('min_temp', np.float64),
-                          ('mean_temp', np.float64),
-                          ('max_temp', np.float64),
-                          ('min_pseudo', np.float64),
-                          ('mean_pseudo', np.float64),
-                          ('max_pseudo', np.float64),
-                          ('converged', np.bool),
-                          ('unconverged_hot', np.bool),
-                          ('unconverged_cold', np.bool),
-                          ('hotter_state', np.int8),
-                          ('colder_state', np.int8)]
-
-    # There are separate items for the first and second dwells, so for each item specific to the current model, add
-    # corresponding first and second dwell dtypes.
-    for param, state in state_pair_dtype_dict.items():
-        full_results_dtype.append((param + '1', state))
-
-    for param, state in state_pair_dtype_dict.items():
-        full_results_dtype.append((param + '2', state))
-
-    return full_results_dtype
-
-
-def get_local_model(filename):
-    """ Load parameters for a single Xija model.
-
-    :param filename: File path to local model specification file
-    :return: Model spec as a dictionary, md5 hash of model spec
-
-    """
-
-    with open(filename) as fid:  # 'aca/aca_spec.json', 'rb') as fid:
-        f = fid.read()
-
-    return json.loads(f), md5(f.encode('utf-8')).hexdigest()
 
 
 def save_results_to_hdf5(filename, results_array):
