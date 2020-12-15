@@ -1,16 +1,19 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-import numpy as np
+from hashlib import md5
+from json import loads as jsonloads
+from os.path import expanduser
 from urllib.request import urlopen
 from urllib.error import URLError
 import json
-from os.path import expanduser
+
+from h5py import string_dtype
+import numpy as np
 from scipy import interpolate
-from hashlib import md5
 
 from Chandra.Time import DateTime
 import xija
 
-import h5py
 
 pseudo_names = dict(
     zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', 'dea0']))
@@ -43,18 +46,18 @@ def load_model_specs():
         local_dir = '/AXAFLIB/chandra_models/chandra_models/xija/'
 
         if internet:
-            model_spec_url = url + branch  # aca/aca_spec.json'
+            model_spec_url = url + branch
             with urlopen(model_spec_url) as url:
                 response = url.read()
                 f = response.decode('utf-8')
         else:
             home = expanduser("~")
-            with open(home + local_dir + branch) as fid:  # 'aca/aca_spec.json', 'rb') as fid:
+            with open(home + local_dir + branch) as fid:
                 f = fid.read()
 
         md5_hash = md5(f.encode('utf-8')).hexdigest()
 
-        return json.loads(f), md5_hash
+        return jsonloads(f), md5_hash
 
     model_specs = {}
 
@@ -78,6 +81,60 @@ def load_model_specs():
     model_specs['pm2thv1t'], model_specs['pm2thv1t_hash'] = get_model('mups_valve/pm2thv1t_spec.json', internet)
 
     return model_specs
+
+
+def get_full_dtype(state_pair_dtype_dict):
+    """ Add Numpy data types for parameters specific to model to the boilerplate array data types.
+
+    :param state_pair_dtype_dict: Dictionary of Numpy data types
+    :return: List of Numpy data types, including items specific to current model (e.g. pitch, roll, ccd_count, etc.)
+
+    Example input:
+        state_pair_dtype_dict = {'pitch': np.float64, 'roll': np.float64}
+
+    """
+
+    full_results_dtype = [('msid', string_dtype('utf-8', 20)),
+                          ('date', string_dtype('utf-8', 8)),
+                          ('datesecs', np.float64),
+                          ('limit', np.float64),
+                          ('t_dwell1', np.float64),
+                          ('t_dwell2', np.float64),
+                          ('min_temp', np.float64),
+                          ('mean_temp', np.float64),
+                          ('max_temp', np.float64),
+                          ('min_pseudo', np.float64),
+                          ('mean_pseudo', np.float64),
+                          ('max_pseudo', np.float64),
+                          ('converged', np.bool),
+                          ('unconverged_hot', np.bool),
+                          ('unconverged_cold', np.bool),
+                          ('hotter_state', np.int8),
+                          ('colder_state', np.int8)]
+
+    # There are separate items for the first and second dwells, so for each item specific to the current model, add
+    # corresponding first and second dwell dtypes.
+    for param, state in state_pair_dtype_dict.items():
+        full_results_dtype.append((param + '1', state))
+
+    for param, state in state_pair_dtype_dict.items():
+        full_results_dtype.append((param + '2', state))
+
+    return full_results_dtype
+
+
+def get_local_model(filename):
+    """ Load parameters for a single Xija model.
+
+    :param filename: File path to local model specification file
+    :return: Model spec as a dictionary, md5 hash of model spec
+
+    """
+
+    with open(filename) as fid:  # 'aca/aca_spec.json', 'rb') as fid:
+        f = fid.read()
+
+    return json.loads(f), md5(f.encode('utf-8')).hexdigest()
 
 
 def c_to_f(temp):
@@ -310,7 +367,7 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
 
 
 def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, model_spec, init, limit_type='max',
-                      duration=2592000, t_backoff=1725000, n_dwells=10., max_dwell=None, pseudo=None):
+                      duration=2592000, t_backoff=1725000, n_dwells=10, max_dwell=None, pseudo=None):
     """ Determine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1, if any exists.
 
     Args:
@@ -673,27 +730,6 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
 
 if __name__ == '__main__':
 
-    utf8_type_20 = h5py.string_dtype('utf-8', 20)
-    utf8_type_8 = h5py.string_dtype('utf-8', 8)
-
-    results_dtype = [('msid', utf8_type_20),
-                     ('date', utf8_type_8),
-                     ('datesecs', np.float64),
-                     ('limit', np.float64),
-                     ('t_dwell1', np.float64),
-                     ('t_dwell2', np.float64),
-                     ('min_temp', np.float64),
-                     ('mean_temp', np.float64),
-                     ('max_temp', np.float64),
-                     ('min_pseudo', np.float64),
-                     ('mean_pseudo', np.float64),
-                     ('max_pseudo', np.float64),
-                     ('converged', np.bool),
-                     ('unconverged_hot', np.bool),
-                     ('unconverged_cold', np.bool),
-                     ('hotter_state', np.int8),
-                     ('colder_state', np.int8)]
-
     t1 = DateTime().secs
 
     model_init = {'aacccdpt': {'aacccdpt': -7., 'aca0': -7., 'eclipse': False},
@@ -722,11 +758,7 @@ if __name__ == '__main__':
 
     state_pair_dtype = {'pitch': np.float64}
 
-    for key, value in state_pair_dtype.items():
-        results_dtype.append((key + '1', value))
-
-    for key, value in state_pair_dtype.items():
-        results_dtype.append((key + '2', value))
+    results_dtype = get_full_dtype(state_pair_dtype)
 
     results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs,
                               results_dtype)
