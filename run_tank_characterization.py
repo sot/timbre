@@ -3,6 +3,9 @@ from os.path import expanduser
 from multiprocessing import Process, Manager
 import logging
 import h5py
+import numpy as np
+
+from cxotime import CxoTime
 
 logging.getLogger("xija").setLevel(logging.WARNING)
 
@@ -11,19 +14,19 @@ sys.path.append(home + '/AXAFLIB/timbre/')
 from timbre import *
 
 
-def save_results_to_hdf5(filename, results_array):
+def save_results_to_hdf5(fname, results_array):
     """ Save Timbre results to an HDF5 file.
 
     Due to some compatibility issues with some string formats in HDF5 files, this may be deprecated in the future.
 
-    :param filename: File name for HDF5 output file
+    :param fname: File name for HDF5 output file
     :param results_array: Numpy array of results
 
     """
 
     ind = np.argsort(results_array, order=['datesecs', 'pitch1', 'pitch2', 't_dwell1', 't_dwell2'])
     results_array = results_array[ind]
-    with h5py.File(filename, 'w') as f:
+    with h5py.File(fname, 'w') as f:
         dset = f.create_dataset('results', (np.shape(results_array)), dtype=results_dtype)
         dset[...] = results_array
         f.flush()
@@ -48,7 +51,7 @@ def run_cases(msid_name, model_specification, model_md5, initial_params, dwell1_
 
     k = 0
     for full_date_str, limits in date_and_limit_cases.items():
-        date_str = DateTime(full_date_str).date[:4] + DateTime(full_date_str).date[5:8]
+        date_str = CxoTime(full_date_str).date[:4] + CxoTime(full_date_str).date[5:8]
 
         for sets in dwell1_sets:
 
@@ -73,17 +76,18 @@ def run_cases(msid_name, model_specification, model_md5, initial_params, dwell1_
                     j.join()
 
                 results_array = np.hstack(return_list)
-                filename = f'{msid_name}_{model_md5}_{datestamp}_{date_str}_save_{k}.h5'
-                save_results_to_hdf5(filename, results_array)
+                fname = f'{msid_name}_{model_md5}_{datestamp}_{date_str}_save_{k}.h5'
+                save_results_to_hdf5(fname, results_array)
 
-                print(f'Completed {date_str}, limit={limit_celsius}, dwell1 times={sets} on {DateTime().caldate}')
+                print(f'Completed {date_str}, limit={limit_celsius}, dwell1 times={sets} on {CxoTime().caldate}')
 
 
 if __name__ == "__main__":
 
-    model_spec, model_hash = get_local_model('/Users/mdahmer/AXAFLIB/chandra_models/chandra_models/xija/pftank2t/pftank2t_spec.json')
+    filename = home + '/AXAFLIB/chandra_models/chandra_models/xija/pftank2t/pftank2t_spec.json'
+    model_spec, model_hash = get_local_model(filename)
     msid = 'pftank2t'
-    datestamp = DateTime().caldate[:9]
+    datestamp = CxoTime().caldate[:9]
     init = {'pftank2t': -8, 'pf0tank2t': -8, 'eclipse': False}
     state_pair_dtype = {'pitch': np.float64, 'roll': np.float64}
     results_dtype = get_full_dtype(state_pair_dtype)
@@ -105,8 +109,8 @@ if __name__ == "__main__":
 
     run_sets = [[10000, 20000, 30000, 40000], [50000, 60000, 70000, 80000], [90000, 100000]]
 
-    print(f'Starting Timbre simulations on {DateTime().caldate}')
+    print(f'Starting Timbre simulations on {CxoTime().caldate}')
 
     run_cases(msid, model_spec, model_hash, init, run_sets, state_pairs, results_dtype, cases)
 
-    print(f'Completed all Timbre simulations on {DateTime().caldate}')
+    print(f'Completed all Timbre simulations on {CxoTime().caldate}')

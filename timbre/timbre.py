@@ -6,6 +6,7 @@ from os.path import expanduser
 from urllib.request import urlopen
 from urllib.error import URLError
 import json
+from copy import copy
 
 from h5py import string_dtype
 import numpy as np
@@ -17,6 +18,24 @@ import xija
 
 pseudo_names = dict(
     zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', 'dea0']))
+
+base_dtype = [('msid', string_dtype('utf-8', 20)),
+              ('date', string_dtype('utf-8', 8)),
+              ('datesecs', np.float64),
+              ('limit', np.float64),
+              ('t_dwell1', np.float64),
+              ('t_dwell2', np.float64),
+              ('min_temp', np.float64),
+              ('mean_temp', np.float64),
+              ('max_temp', np.float64),
+              ('min_pseudo', np.float64),
+              ('mean_pseudo', np.float64),
+              ('max_pseudo', np.float64),
+              ('converged', np.bool),
+              ('unconverged_hot', np.bool),
+              ('unconverged_cold', np.bool),
+              ('hotter_state', np.int8),
+              ('colder_state', np.int8)]
 
 
 def load_model_specs():
@@ -94,23 +113,7 @@ def get_full_dtype(state_pair_dtype_dict):
 
     """
 
-    full_results_dtype = [('msid', string_dtype('utf-8', 20)),
-                          ('date', string_dtype('utf-8', 8)),
-                          ('datesecs', np.float64),
-                          ('limit', np.float64),
-                          ('t_dwell1', np.float64),
-                          ('t_dwell2', np.float64),
-                          ('min_temp', np.float64),
-                          ('mean_temp', np.float64),
-                          ('max_temp', np.float64),
-                          ('min_pseudo', np.float64),
-                          ('mean_pseudo', np.float64),
-                          ('max_pseudo', np.float64),
-                          ('converged', np.bool),
-                          ('unconverged_hot', np.bool),
-                          ('unconverged_cold', np.bool),
-                          ('hotter_state', np.int8),
-                          ('colder_state', np.int8)]
+    full_results_dtype = copy(base_dtype)
 
     # There are separate items for the first and second dwells, so for each item specific to the current model, add
     # corresponding first and second dwell dtypes.
@@ -726,47 +729,3 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
         shared_data.append(results_array)
     else:
         return results_array
-
-
-if __name__ == '__main__':
-
-    t1 = DateTime().secs
-
-    model_init = {'aacccdpt': {'aacccdpt': -7., 'aca0': -7., 'eclipse': False},
-                  'pftank2t': {'pftank2t': f_to_c(95.), 'pf0tank2t': f_to_c(95.), 'eclipse': False},
-                  'tcylaft6': {'tcylaft6': f_to_c(120.), 'cc0': f_to_c(120.), 'eclipse': False},
-                  '4rt700t': {'4rt700t': f_to_c(95.), 'oba0': f_to_c(95.), 'eclipse': False},
-                  '1dpamzt': {'1dpamzt': 35., 'dpa0': 35., 'eclipse': False, 'vid_board': True, 'clocking': True,
-                              'dpa_power': 0.0, 'sim_z': 100000},
-                  '1deamzt': {'1deamzt': 35., 'dea0': 35., 'eclipse': False, 'vid_board': True, 'clocking': True,
-                              'dpa_power': 0.0, 'sim_z': 100000}}
-
-    model_specs = load_model_specs()
-
-    date = '2021:001:00:00:00'
-    t_dwell1 = 20000.
-    msid = 'aacccdpt'
-    limit = -7.1
-
-    state_pairs = (({'pitch': 144.2}, {'pitch': 154.95}),
-                   ({'pitch': 90.2}, {'pitch': 148.95}),
-                   ({'pitch': 50}, {'pitch': 140}),
-                   ({'pitch': 90}, {'pitch': 100}),
-                   ({'pitch': 75}, {'pitch': 130}),
-                   ({'pitch': 170}, {'pitch': 90}),
-                   ({'pitch': 90}, {'pitch': 170}))
-
-    state_pair_dtype = {'pitch': np.float64}
-
-    results_dtype = get_full_dtype(state_pair_dtype)
-
-    results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs,
-                              results_dtype)
-
-    print(results)
-    print('MD5 sum for ACA model: {}'.format(model_specs['aacccdpt_hash']))
-
-    t2 = DateTime().secs
-
-    print('\nRunning {} state pairs tooks {} seconds'.format(len(state_pairs), t2 - t1))
-

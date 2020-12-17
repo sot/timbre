@@ -2,10 +2,8 @@
 import os
 
 import numpy as np
-from h5py import string_dtype
 
 import xija
-
 import timbre
 
 root = os.path.dirname(__file__)
@@ -41,28 +39,9 @@ def test_get_full_dtype():
     """ Test boilerplate dtype generation.
     """
 
-    full_results_dtype = [('msid', string_dtype('utf-8', 20)),
-                          ('date', string_dtype('utf-8', 8)),
-                          ('datesecs', np.float64),
-                          ('limit', np.float64),
-                          ('t_dwell1', np.float64),
-                          ('t_dwell2', np.float64),
-                          ('min_temp', np.float64),
-                          ('mean_temp', np.float64),
-                          ('max_temp', np.float64),
-                          ('min_pseudo', np.float64),
-                          ('mean_pseudo', np.float64),
-                          ('max_pseudo', np.float64),
-                          ('converged', np.bool),
-                          ('unconverged_hot', np.bool),
-                          ('unconverged_cold', np.bool),
-                          ('hotter_state', np.int8),
-                          ('colder_state', np.int8)]
-
     d = timbre.get_full_dtype({})
 
     assert isinstance(np.dtype(d), np.dtype)
-    assert d == full_results_dtype
 
 
 def test_setup_model():
@@ -82,8 +61,7 @@ def test_find_second_dwell():
     dwell2_state = {'pitch': 148.95}
 
     results = timbre.find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, aca_model_spec,
-                                       model_init[msid], limit_type='max',
-                      duration=2592000, t_backoff=1725000, n_dwells=10, max_dwell=None, pseudo=None)
+                                       model_init[msid], limit_type='max')
     assert isinstance(results, dict)
     assert np.isclose(results['dwell_2_time'], 65723.0, atol=1.0e3)
 
