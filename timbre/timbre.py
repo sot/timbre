@@ -12,7 +12,7 @@ from h5py import string_dtype
 import numpy as np
 from scipy import interpolate
 
-from Chandra.Time import DateTime
+from cxotime import CxoTime
 import xija
 
 
@@ -182,8 +182,8 @@ def setup_model(msid, t0, t1, model_spec, init):
     Args:
         msid (str): Primary MSID for model; in this case it can be anything as it is only being used to name the model,
             however keeping the convention to name the model after the primary MSID being predicted reduces confusion
-        t0 (str, float, int): Start time for model prediction; this can be any format that Chandra.Time.DateTime accepts
-        t1 (str, float, int): End time for model prediction; this can be any format that Chandra.Time.DateTime accepts
+        t0 (str, float, int): Start time for model prediction; this can be any format that cxotime.CxoTime accepts
+        t1 (str, float, int): End time for model prediction; this can be any format that cxotime.CxoTime accepts
         model_spec (dict, string): Dictionary of model parameters or file location where parameters can be imported
         init (dict): Dictionary of Xija model initialization parameters, can be empty
 
@@ -221,8 +221,7 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
     """ Run a Xija model for a given time and state profile.
 
     Args:
-        times (numpy.ndarray): Array of time values, in seconds from '1997:365:23:58:56.816' (Chandra.Time.DateTime
-            epoch)
+        times (numpy.ndarray): Array of time values, in seconds from '1997:365:23:58:56.816' (cxotime.CxoTime epoch)
         schedule (dict): Dictionary of pitch, roll, etc. values that match the time values specified above in `times`
         msid (str): Primary MSID for model being run
         model_spec (dict, string): Dictionary of model parameters or file location where parameters can be imported
@@ -236,7 +235,7 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
 
     Example:
 
-        times = np.array(DateTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00',
+        times = np.array(CxoTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00',
                                    '2019:003:00:00:00']).secs)
 
         pitch = np.array([150, 90, 156, 156])
@@ -282,7 +281,7 @@ def calc_binary_schedule(datesecs, state1, state2, t_dwell1, t_dwell2, msid, mod
 
     Args:
         datesecs (float, int): Date for start of simulation, in seconds from '1997:365:23:58:56.816'
-            (Chandra.Time.DateTime epoch)
+            (cxotime.CxoTime epoch)
         state1 (dict): States for fixed dwell (pitch, roll, ccds, etc.)
         state2 (dict): States for variable dwell (pitch, roll, ccds, etc.)
         t_dwell1 (float, int): Fixed dwell duration in seconds, this is in the SCALED format
@@ -333,7 +332,7 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
 
     Args:
         datesecs (float, int): Date for start of simulation, in seconds from '1997:365:23:58:56.816'
-            (Chandra.Time.DateTime epoch)
+            (cxotime.CxoTime epoch)
         dwell1_state (dict): States for fixed dwell (pitch, roll, ccds, etc.)
         dwell2_state (dict): States for variable dwell (pitch, roll, ccds, etc.)
         t_dwell1 (float, int): Fixed dwell duration in seconds, this is in the SCALED format
@@ -375,7 +374,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
     Args:
         date (float, int, str): Date for start of simulation, in seconds from '1997:365:23:58:56.816', or any other
-            format readable by Chandra.Time.DateTime
+            format readable by cxotime.CxoTime
         dwell1_state (dict): States for fixed dwell (pitch, roll, ccds, etc.)
         dwell2_state (dict): States for variable dwell (pitch, roll, ccds, etc.)
         t_dwell1 (float, int): Fixed dwell duration in seconds
@@ -397,7 +396,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
     """
 
-    datesecs = DateTime(date).secs
+    datesecs = CxoTime(date).secs
 
     if 'max' in limit_type.lower():
         limit_type = 'max'
@@ -618,7 +617,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
         init (dict): Dictionary of Xija model initialization parameters, can be empty
         limit (float): Temperature limit for primary MSID in model for this simulation
         date (float, int, str): Date for start of simulation, in seconds from '1997:365:23:58:56.816', or any other
-            format readable by Chandra.Time.DateTime
+            format readable by cxotime.CxoTime
         dwell_1_duration (float, int): Duration in seconds of dwell 1, also viewed as the known or defined dwell
             duration, for which one wants to find a complementary dwell duration (dwell duration 2)
         state_pairs: Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states, see
@@ -672,8 +671,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
 
     duration = 30 * 24 * 3600.
     t_backoff = 2 * duration / 3
-    datestr = DateTime(date).date[:8]
-    datesecs = DateTime(date).secs
+    datestr = CxoTime(date).date[:8]
+    datesecs = CxoTime(date).secs
 
     results = []
 
