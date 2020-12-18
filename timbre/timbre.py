@@ -1,22 +1,41 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 from hashlib import md5
-from json import loads as jsonloads
-from os.path import expanduser
+from json import loads as json_loads
+from pathlib import Path
 from urllib.request import urlopen
 from urllib.error import URLError
 import json
+from copy import copy
 
 from h5py import string_dtype
 import numpy as np
 from scipy import interpolate
 
-from Chandra.Time import DateTime
+from cxotime import CxoTime
 import xija
 
 
 pseudo_names = dict(
     zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', 'dea0']))
+
+base_dtype = [('msid', string_dtype('utf-8', 20)),
+              ('date', string_dtype('utf-8', 8)),
+              ('datesecs', np.float64),
+              ('limit', np.float64),
+              ('t_dwell1', np.float64),
+              ('t_dwell2', np.float64),
+              ('min_temp', np.float64),
+              ('mean_temp', np.float64),
+              ('max_temp', np.float64),
+              ('min_pseudo', np.float64),
+              ('mean_pseudo', np.float64),
+              ('max_pseudo', np.float64),
+              ('converged', np.bool),
+              ('unconverged_hot', np.bool),
+              ('unconverged_cold', np.bool),
+              ('hotter_state', np.int8),
+              ('colder_state', np.int8)]
 
 
 def load_model_specs():
@@ -29,16 +48,14 @@ def load_model_specs():
 
     """
 
-    def get_model(branch, internet):
+    def get_model(local_file_path, internet):
         """ Load parameters for a single Xija model.
 
-        Args:
-            branch (str): Relative location of model file, starting from the chandra_models/chandra_models/xija/
-                directory
-            internet (bool): Availability of an internet connection, for accessing github.com
+        :param local_file_path: Relative location of model file, starting from the
+            chandra_models/chandra_models/xija/directory
+        :param internet:: Availability of an internet connection, for accessing github.com
 
-        Returns:
-            dictionary: JSON file stored as a dictionary, containing Xija model parameters
+        :return: JSON file stored as a dictionary, containing Xija model parameters
 
         """
 
@@ -46,18 +63,17 @@ def load_model_specs():
         local_dir = '/AXAFLIB/chandra_models/chandra_models/xija/'
 
         if internet:
-            model_spec_url = url + branch
+            model_spec_url = url + local_file_path
             with urlopen(model_spec_url) as url:
                 response = url.read()
                 f = response.decode('utf-8')
         else:
-            home = expanduser("~")
-            with open(home + local_dir + branch) as fid:
+            with open(Path('~' + local_dir + local_file_path).expanduser()) as fid:
                 f = fid.read()
 
         md5_hash = md5(f.encode('utf-8')).hexdigest()
 
-        return jsonloads(f), md5_hash
+        return json_loads(f), md5_hash
 
     model_specs = {}
 
@@ -94,23 +110,7 @@ def get_full_dtype(state_pair_dtype_dict):
 
     """
 
-    full_results_dtype = [('msid', string_dtype('utf-8', 20)),
-                          ('date', string_dtype('utf-8', 8)),
-                          ('datesecs', np.float64),
-                          ('limit', np.float64),
-                          ('t_dwell1', np.float64),
-                          ('t_dwell2', np.float64),
-                          ('min_temp', np.float64),
-                          ('mean_temp', np.float64),
-                          ('max_temp', np.float64),
-                          ('min_pseudo', np.float64),
-                          ('mean_pseudo', np.float64),
-                          ('max_pseudo', np.float64),
-                          ('converged', np.bool),
-                          ('unconverged_hot', np.bool),
-                          ('unconverged_cold', np.bool),
-                          ('hotter_state', np.int8),
-                          ('colder_state', np.int8)]
+    full_results_dtype = copy(base_dtype)
 
     # There are separate items for the first and second dwells, so for each item specific to the current model, add
     # corresponding first and second dwell dtypes.
@@ -179,8 +179,8 @@ def setup_model(msid, t0, t1, model_spec, init):
     Args:
         msid (str): Primary MSID for model; in this case it can be anything as it is only being used to name the model,
             however keeping the convention to name the model after the primary MSID being predicted reduces confusion
-        t0 (str, float, int): Start time for model prediction; this can be any format that Chandra.Time.DateTime accepts
-        t1 (str, float, int): End time for model prediction; this can be any format that Chandra.Time.DateTime accepts
+        t0 (str, float, int): Start time for model prediction; this can be any format that cxotime.CxoTime accepts
+        t1 (str, float, int): End time for model prediction; this can be any format that cxotime.CxoTime accepts
         model_spec (dict, string): Dictionary of model parameters or file location where parameters can be imported
         init (dict): Dictionary of Xija model initialization parameters, can be empty
 
@@ -218,8 +218,7 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
     """ Run a Xija model for a given time and state profile.
 
     Args:
-        times (numpy.ndarray): Array of time values, in seconds from '1997:365:23:58:56.816' (Chandra.Time.DateTime
-            epoch)
+        times (numpy.ndarray): Array of time values, in seconds from '1997:365:23:58:56.816' (cxotime.CxoTime epoch)
         schedule (dict): Dictionary of pitch, roll, etc. values that match the time values specified above in `times`
         msid (str): Primary MSID for model being run
         model_spec (dict, string): Dictionary of model parameters or file location where parameters can be imported
@@ -233,7 +232,7 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
 
     Example:
 
-        times = np.array(DateTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00',
+        times = np.array(CxoTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00',
                                    '2019:003:00:00:00']).secs)
 
         pitch = np.array([150, 90, 156, 156])
@@ -279,7 +278,7 @@ def calc_binary_schedule(datesecs, state1, state2, t_dwell1, t_dwell2, msid, mod
 
     Args:
         datesecs (float, int): Date for start of simulation, in seconds from '1997:365:23:58:56.816'
-            (Chandra.Time.DateTime epoch)
+            (cxotime.CxoTime epoch)
         state1 (dict): States for fixed dwell (pitch, roll, ccds, etc.)
         state2 (dict): States for variable dwell (pitch, roll, ccds, etc.)
         t_dwell1 (float, int): Fixed dwell duration in seconds, this is in the SCALED format
@@ -330,7 +329,7 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
 
     Args:
         datesecs (float, int): Date for start of simulation, in seconds from '1997:365:23:58:56.816'
-            (Chandra.Time.DateTime epoch)
+            (cxotime.CxoTime epoch)
         dwell1_state (dict): States for fixed dwell (pitch, roll, ccds, etc.)
         dwell2_state (dict): States for variable dwell (pitch, roll, ccds, etc.)
         t_dwell1 (float, int): Fixed dwell duration in seconds, this is in the SCALED format
@@ -372,7 +371,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
     Args:
         date (float, int, str): Date for start of simulation, in seconds from '1997:365:23:58:56.816', or any other
-            format readable by Chandra.Time.DateTime
+            format readable by cxotime.CxoTime
         dwell1_state (dict): States for fixed dwell (pitch, roll, ccds, etc.)
         dwell2_state (dict): States for variable dwell (pitch, roll, ccds, etc.)
         t_dwell1 (float, int): Fixed dwell duration in seconds
@@ -394,7 +393,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
     """
 
-    datesecs = DateTime(date).secs
+    datesecs = CxoTime(date).secs
 
     if 'max' in limit_type.lower():
         limit_type = 'max'
@@ -615,7 +614,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
         init (dict): Dictionary of Xija model initialization parameters, can be empty
         limit (float): Temperature limit for primary MSID in model for this simulation
         date (float, int, str): Date for start of simulation, in seconds from '1997:365:23:58:56.816', or any other
-            format readable by Chandra.Time.DateTime
+            format readable by cxotime.CxoTime
         dwell_1_duration (float, int): Duration in seconds of dwell 1, also viewed as the known or defined dwell
             duration, for which one wants to find a complementary dwell duration (dwell duration 2)
         state_pairs: Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states, see
@@ -669,8 +668,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
 
     duration = 30 * 24 * 3600.
     t_backoff = 2 * duration / 3
-    datestr = DateTime(date).date[:8]
-    datesecs = DateTime(date).secs
+    datestr = CxoTime(date).date[:8]
+    datesecs = CxoTime(date).secs
 
     results = []
 
@@ -726,47 +725,3 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
         shared_data.append(results_array)
     else:
         return results_array
-
-
-if __name__ == '__main__':
-
-    t1 = DateTime().secs
-
-    model_init = {'aacccdpt': {'aacccdpt': -7., 'aca0': -7., 'eclipse': False},
-                  'pftank2t': {'pftank2t': f_to_c(95.), 'pf0tank2t': f_to_c(95.), 'eclipse': False},
-                  'tcylaft6': {'tcylaft6': f_to_c(120.), 'cc0': f_to_c(120.), 'eclipse': False},
-                  '4rt700t': {'4rt700t': f_to_c(95.), 'oba0': f_to_c(95.), 'eclipse': False},
-                  '1dpamzt': {'1dpamzt': 35., 'dpa0': 35., 'eclipse': False, 'vid_board': True, 'clocking': True,
-                              'dpa_power': 0.0, 'sim_z': 100000},
-                  '1deamzt': {'1deamzt': 35., 'dea0': 35., 'eclipse': False, 'vid_board': True, 'clocking': True,
-                              'dpa_power': 0.0, 'sim_z': 100000}}
-
-    model_specs = load_model_specs()
-
-    date = '2021:001:00:00:00'
-    t_dwell1 = 20000.
-    msid = 'aacccdpt'
-    limit = -7.1
-
-    state_pairs = (({'pitch': 144.2}, {'pitch': 154.95}),
-                   ({'pitch': 90.2}, {'pitch': 148.95}),
-                   ({'pitch': 50}, {'pitch': 140}),
-                   ({'pitch': 90}, {'pitch': 100}),
-                   ({'pitch': 75}, {'pitch': 130}),
-                   ({'pitch': 170}, {'pitch': 90}),
-                   ({'pitch': 90}, {'pitch': 170}))
-
-    state_pair_dtype = {'pitch': np.float64}
-
-    results_dtype = get_full_dtype(state_pair_dtype)
-
-    results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs,
-                              results_dtype)
-
-    print(results)
-    print('MD5 sum for ACA model: {}'.format(model_specs['aacccdpt_hash']))
-
-    t2 = DateTime().secs
-
-    print('\nRunning {} state pairs tooks {} seconds'.format(len(state_pairs), t2 - t1))
-

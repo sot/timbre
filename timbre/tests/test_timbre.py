@@ -1,14 +1,11 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-import os
+from pathlib import Path
 
 import numpy as np
-from h5py import string_dtype
 
 import xija
-
 import timbre
 
-root = os.path.dirname(__file__)
 
 model_init = {'aacccdpt': {'aacccdpt': -7., 'aca0': -7., 'eclipse': False},
               'pftank2t': {'pftank2t': timbre.f_to_c(95.), 'pf0tank2t': timbre.f_to_c(95.), 'eclipse': False},
@@ -19,8 +16,8 @@ model_init = {'aacccdpt': {'aacccdpt': -7., 'aca0': -7., 'eclipse': False},
               '1deamzt': {'1deamzt': 35., 'dea0': 35., 'eclipse': False, 'vid_board': True, 'clocking': True,
                           'dpa_power': 0.0, 'sim_z': 100000}}
 
-aca_model_spec_filename = os.path.join(root, 'data', 'aca_spec.json')
-aca_model_spec, aca_md5 = timbre.get_local_model(aca_model_spec_filename)
+root = Path(__file__).parents[0]
+aca_model_spec, aca_md5 = timbre.get_local_model(Path(root, 'data', 'aca_spec.json'))
 
 
 def test_c_to_f():
@@ -41,28 +38,9 @@ def test_get_full_dtype():
     """ Test boilerplate dtype generation.
     """
 
-    full_results_dtype = [('msid', string_dtype('utf-8', 20)),
-                          ('date', string_dtype('utf-8', 8)),
-                          ('datesecs', np.float64),
-                          ('limit', np.float64),
-                          ('t_dwell1', np.float64),
-                          ('t_dwell2', np.float64),
-                          ('min_temp', np.float64),
-                          ('mean_temp', np.float64),
-                          ('max_temp', np.float64),
-                          ('min_pseudo', np.float64),
-                          ('mean_pseudo', np.float64),
-                          ('max_pseudo', np.float64),
-                          ('converged', np.bool),
-                          ('unconverged_hot', np.bool),
-                          ('unconverged_cold', np.bool),
-                          ('hotter_state', np.int8),
-                          ('colder_state', np.int8)]
-
     d = timbre.get_full_dtype({})
 
     assert isinstance(np.dtype(d), np.dtype)
-    assert d == full_results_dtype
 
 
 def test_setup_model():
@@ -82,8 +60,7 @@ def test_find_second_dwell():
     dwell2_state = {'pitch': 148.95}
 
     results = timbre.find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, aca_model_spec,
-                                       model_init[msid], limit_type='max',
-                      duration=2592000, t_backoff=1725000, n_dwells=10, max_dwell=None, pseudo=None)
+                                       model_init[msid], limit_type='max')
     assert isinstance(results, dict)
     assert np.isclose(results['dwell_2_time'], 65723.0, atol=1.0e3)
 
