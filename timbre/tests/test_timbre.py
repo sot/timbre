@@ -1,12 +1,11 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-import os
+from pathlib import Path
 
 import numpy as np
 
 import xija
 import timbre
 
-root = os.path.dirname(__file__)
 
 model_init = {'aacccdpt': {'aacccdpt': -7., 'aca0': -7., 'eclipse': False},
               'pftank2t': {'pftank2t': timbre.f_to_c(95.), 'pf0tank2t': timbre.f_to_c(95.), 'eclipse': False},
@@ -17,8 +16,8 @@ model_init = {'aacccdpt': {'aacccdpt': -7., 'aca0': -7., 'eclipse': False},
               '1deamzt': {'1deamzt': 35., 'dea0': 35., 'eclipse': False, 'vid_board': True, 'clocking': True,
                           'dpa_power': 0.0, 'sim_z': 100000}}
 
-aca_model_spec_filename = os.path.join(root, 'data', 'aca_spec.json')
-aca_model_spec, aca_md5 = timbre.get_local_model(aca_model_spec_filename)
+root = Path(__file__).parents[0]
+aca_model_spec, aca_md5 = timbre.get_local_model(Path(root, 'data', 'aca_spec.json'))
 
 
 def test_c_to_f():

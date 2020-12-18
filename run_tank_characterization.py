@@ -1,5 +1,4 @@
-import sys
-from os.path import expanduser
+from pathlib import Path
 from multiprocessing import Process, Manager
 import logging
 import h5py
@@ -7,11 +6,9 @@ import numpy as np
 
 from cxotime import CxoTime
 
-logging.getLogger("xija").setLevel(logging.WARNING)
-
-home = expanduser("~")
-sys.path.append(home + '/AXAFLIB/timbre/')
 from timbre import *
+
+logging.getLogger("xija").setLevel(logging.WARNING)
 
 
 def save_results_to_hdf5(fname, results_array):
@@ -84,7 +81,7 @@ def run_cases(msid_name, model_specification, model_md5, initial_params, dwell1_
 
 if __name__ == "__main__":
 
-    filename = home + '/AXAFLIB/chandra_models/chandra_models/xija/pftank2t/pftank2t_spec.json'
+    filename = Path('~/AXAFLIB/chandra_models/chandra_models/xija/pftank2t/pftank2t_spec.json').expanduser()
     model_spec, model_hash = get_local_model(filename)
     msid = 'pftank2t'
     datestamp = CxoTime().caldate[:9]

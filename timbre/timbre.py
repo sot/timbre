@@ -1,8 +1,8 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 from hashlib import md5
-from json import loads as jsonloads
-from os.path import expanduser
+from json import loads as json_loads
+from pathlib import Path
 from urllib.request import urlopen
 from urllib.error import URLError
 import json
@@ -48,16 +48,14 @@ def load_model_specs():
 
     """
 
-    def get_model(branch, internet):
+    def get_model(local_file_path, internet):
         """ Load parameters for a single Xija model.
 
-        Args:
-            branch (str): Relative location of model file, starting from the chandra_models/chandra_models/xija/
-                directory
-            internet (bool): Availability of an internet connection, for accessing github.com
+        :param local_file_path: Relative location of model file, starting from the
+            chandra_models/chandra_models/xija/directory
+        :param internet:: Availability of an internet connection, for accessing github.com
 
-        Returns:
-            dictionary: JSON file stored as a dictionary, containing Xija model parameters
+        :return: JSON file stored as a dictionary, containing Xija model parameters
 
         """
 
@@ -65,18 +63,17 @@ def load_model_specs():
         local_dir = '/AXAFLIB/chandra_models/chandra_models/xija/'
 
         if internet:
-            model_spec_url = url + branch
+            model_spec_url = url + local_file_path
             with urlopen(model_spec_url) as url:
                 response = url.read()
                 f = response.decode('utf-8')
         else:
-            home = expanduser("~")
-            with open(home + local_dir + branch) as fid:
+            with open(Path('~' + local_dir + local_file_path).expanduser()) as fid:
                 f = fid.read()
 
         md5_hash = md5(f.encode('utf-8')).hexdigest()
 
-        return jsonloads(f), md5_hash
+        return json_loads(f), md5_hash
 
     model_specs = {}
 
