@@ -44,6 +44,8 @@ def test_get_full_dtype():
 
 
 def test_setup_model():
+    """ Test the model setup/initialization method `setup_model`.
+    """
     model = timbre.setup_model('aacccdpt', '2030:001:00:00:00', '2031:001:00:00:00', aca_model_spec,
                                model_init['aacccdpt'])
 
@@ -51,7 +53,8 @@ def test_setup_model():
 
 
 def test_find_second_dwell():
-
+    """ Test the method, `find_second_dwell`, which is used to find the dwell time needed to balance t_dwell1.
+    """
     date = '2021:001:00:00:00'
     t_dwell1 = 20000.
     msid = 'aacccdpt'
@@ -66,7 +69,8 @@ def test_find_second_dwell():
 
 
 def test_run_state_pairs():
-
+    """ Test the method, `run_state_pairs`, which is used as a helper function to run a number of cases.
+    """
     date = '2021:001:00:00:00'
     t_dwell1 = 20000.
     msid = 'aacccdpt'

@@ -42,10 +42,11 @@ def load_model_specs():
     """ Load Xija model parameters for all available models.
 
     :return: A dictionary containing the model specifications for all available Xija models
+    :rtype: dict
 
-    Note:
-        This will need to be updated as new models are approved or existing models are renamed.
-
+    Note
+    ----
+    This will need to be updated as new models are approved or existing models are renamed.
     """
 
     def get_model(local_file_path, internet):
@@ -56,7 +57,6 @@ def load_model_specs():
         :param internet:: Availability of an internet connection, for accessing github.com
 
         :return: JSON file stored as a dictionary, containing Xija model parameters
-
         """
 
         url = 'https://raw.githubusercontent.com/sot/chandra_models/master/chandra_models/xija/'
@@ -103,11 +103,13 @@ def get_full_dtype(state_pair_dtype_dict):
     """ Add Numpy data types for parameters specific to model to the boilerplate array data types.
 
     :param state_pair_dtype_dict: Dictionary of Numpy data types
+    :type state_pair_dtype_dict: dict
     :return: List of Numpy data types, including items specific to current model (e.g. pitch, roll, ccd_count, etc.)
+    :rtype: list
 
-    Example input:
-        state_pair_dtype_dict = {'pitch': np.float64, 'roll': np.float64}
-
+    Example input
+    -------------
+    state_pair_dtype_dict = {'pitch': np.float64, 'roll': np.float64}
     """
 
     full_results_dtype = copy(base_dtype)
@@ -127,8 +129,9 @@ def get_local_model(filename):
     """ Load parameters for a single Xija model.
 
     :param filename: File path to local model specification file
+    :type filename: str
     :return: Model spec as a dictionary, md5 hash of model spec
-
+    :rtype: tuple
     """
 
     with open(filename) as fid:  # 'aca/aca_spec.json', 'rb') as fid:
@@ -138,14 +141,12 @@ def get_local_model(filename):
 
 
 def c_to_f(temp):
-    """ Convert Celsius to Fahrenheit
+    """ Convert Celsius to Fahrenheit.
 
-    Args:
-        temp (int, float, numpy.ndarray, list, tuple): Temperature in Celsius
-
-    Returns:
-        (int, float, numpy.ndarray, list, tuple): Temperature in Fahrenheit
-
+    :param temp: Temperature in Celsius
+    :type temp: int or float or tuple or list or np.ndarray
+    :return: Temperature in Fahrenheit
+    :rtype: int or float or list or np.ndarray
     """
     if type(temp) is list or type(temp) is tuple:
         return [c * 1.8 + 32 for c in temp]
@@ -154,14 +155,12 @@ def c_to_f(temp):
 
 
 def f_to_c(temp):
-    """ Convert Fahrenheit to Celsius
+    """ Convert Fahrenheit to Celsius.
 
-    Args:
-        temp (int, float, numpy.ndarray, list, tuple): Temperature in Fahrenheit
-
-    Returns:
-        (int, float, numpy.ndarray, list, tuple): Temperature in Celsius
-
+    :param temp: Temperature in Fahrenheit
+    :type temp: int or float or tuple or list or np.ndarray
+    :return: Temperature in Celsius
+    :rtype: int or float or list or np.ndarray
     """
     if type(temp) is list or type(temp) is tuple:
         return [(c - 32) / 1.8 for c in temp]
@@ -176,32 +175,34 @@ def setup_model(msid, t0, t1, model_spec, init):
     streamlined method to creating Xija models that can take both single value data and time defined data
     (e.g. [pitch1, pitch2, pitch3], [time1, time2, time3]), defined in the `init` dictionary.
 
-    Args:
-        msid (str): Primary MSID for model; in this case it can be anything as it is only being used to name the model,
+     :param msid: Primary MSID for model; in this case it can be anything as it is only being used to name the model,
             however keeping the convention to name the model after the primary MSID being predicted reduces confusion
-        t0 (str, float, int): Start time for model prediction; this can be any format that cxotime.CxoTime accepts
-        t1 (str, float, int): End time for model prediction; this can be any format that cxotime.CxoTime accepts
-        model_spec (dict, string): Dictionary of model parameters or file location where parameters can be imported
-        init (dict): Dictionary of Xija model initialization parameters, can be empty
+     :type msid: str
+     :param t0: Start time for model prediction; this can be any format that cxotime.CxoTime accepts
+     :type t0: str or float or int
+     :param t1: End time for model prediction; this can be any format that cxotime.CxoTime accepts
+     :type t1: str or float or int
+     :param model_spec: Dictionary of model parameters or file location where parameters can be imported
+     :type model_spec: dict, str
+     :param init: Dictionary of Xija model initialization parameters, can be empty
+     :type init: dict
+     :rtype: xija.model.XijaModel
 
-    Returns:
-        (xija.model.XijaModel): Xija model object
+    Example
+    -------
+    model_specs = load_model_specs()
 
-    Example:
+    init = {'1dpamzt': 35., 'dpa0': 35., 'eclipse': False, 'roll': 0, 'vid_board': True, 'pitch':155,
+            'clocking': True, 'fep_count': 5, 'ccd_count': 5, 'sim_z': 100000}
 
-        model_specs = load_model_specs()
+    model = setup_model('1dpamzt', '2019:001:00:00:00', '2019:010:00:00:00', model_specs['1dpamzt'], init)
 
-        init = {'1dpamzt': 35., 'dpa0': 35., 'eclipse': False, 'roll': 0, 'vid_board': True, 'pitch':155,
-                          'clocking': True, 'fep_count': 5, 'ccd_count': 5, 'sim_z': 100000}
+    Notes
+    -----
+    This does not run the model, only sets up the model to be run.
 
-        model = setup_model('1dpamzt', '2019:001:00:00:00', '2019:010:00:00:00', model_specs['1dpamzt'], init)
-
-    Notes:
-        This does not run the model, only sets up the model to be run.
-
-        Any parameters not specified in `init` will either need to be pulled from telemetry or explicitly defined
-        outside of this function before running the model.
-
+    Any parameters not specified in `init` will either need to be pulled from telemetry or explicitly defined outside of
+    this function before running the model.
     """
 
     model = xija.ThermalModel(msid, start=t0, stop=t1, model_spec=model_spec)
@@ -217,39 +218,42 @@ def setup_model(msid, t0, t1, model_spec, init):
 def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
     """ Run a Xija model for a given time and state profile.
 
-    Args:
-        times (numpy.ndarray): Array of time values, in seconds from '1997:365:23:58:56.816' (cxotime.CxoTime epoch)
-        schedule (dict): Dictionary of pitch, roll, etc. values that match the time values specified above in `times`
-        msid (str): Primary MSID for model being run
-        model_spec (dict, string): Dictionary of model parameters or file location where parameters can be imported
-        init (dict): Dictionary of Xija model initialization parameters, can be empty but not recommended
-        pseudo (:obj:`str`, optional): Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
+    :param times: Array of time values, in seconds from '1997:365:23:58:56.816' (cxotime.CxoTime epoch)
+    :type times: np.ndarray
+    :param schedule: Dictionary of pitch, roll, etc. values that match the time values specified above in `times`
+    :type schedule: dict
+    :param msid: Primary MSID for model being run
+    :type msid: str
+    :param model_spec: Dictionary of model parameters or file location where parameters can be imported
+    :type model_spec: dict or string
+    :param init: Dictionary of Xija model initialization parameters, can be empty but not recommended
+    :type init: dict
+    :param pseudo: Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
             wishes to retrieve model results for this pseudo node, if it exists
+    :type pseudo: str or None, optional
+    :returns: Results, keys are node names (e.g. 'aacccdpt', 'aca0'), values are Xija model component objects
+    :rtype: dict
 
-    Returns:
-        dict: Dictionary of results, keys are node names (e.g. 'aacccdpt', 'aca0'), values are Xija model component
-            objects
+    Example
+    -------
 
-    Example:
+    times = np.array(CxoTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00', 2019:003:00:00:00']).secs)
 
-        times = np.array(CxoTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00',
-                                   '2019:003:00:00:00']).secs)
+    pitch = np.array([150, 90, 156, 156])
 
-        pitch = np.array([150, 90, 156, 156])
+    schedule = {'pitch': pitch}
 
-        schedule = {'pitch': pitch}
+    model_specs = load_model_specs()
 
-        model_specs = load_model_specs()
+    init = {'1dpamzt': 20., 'dpa0': 20., 'eclipse': False, 'roll': 0, 'vid_board': True, 'clocking': True,
+            'fep_count': 5, 'ccd_count': 5, 'sim_z': 100000}
 
-        init = {'1dpamzt': 20., 'dpa0': 20., 'eclipse': False, 'roll': 0, 'vid_board': True,
-                          'clocking': True, 'fep_count': 5, 'ccd_count': 5, 'sim_z': 100000}
+    results = run_profile(times, pitch, '1dpamzt', model_specs['1dpamzt'], init, pseudo='dpa0')
 
-        results = run_profile(times, pitch, '1dpamzt', model_specs['1dpamzt'], init, pseudo='dpa0')
-
-    Notes:
-        Any parameters specified in `init` will be overwritten by those specified in the body of this function, if they
-        happen to be defined in both places.
-
+    Notes
+    -----
+    Any parameters specified in `init` will be overwritten by those specified in the body of this function, if they
+    happen to be defined in both places.
     """
 
     model = setup_model(msid, times[0], times[-1], model_spec, init)
@@ -273,37 +277,44 @@ def calc_binary_schedule(datesecs, state1, state2, t_dwell1, t_dwell2, msid, mod
     """ Simulate a schedule that switches between two states
 
     This runs the model over a "binary" schedule. This function is intended to be used to optimize the `t_dwell2`
-    parameter so that the predicted temperature during the last `t_backoff` number of seconds peaks within a tolerance
-    of a limit (limit used and specified in a different function).
+    parameter so that the predicted temperature during the last `t_backoff` number of seconds reaches a limit within a
+    tolerance (limit used and specified in a different function).
 
-    Args:
-        datesecs (float, int): Date for start of simulation, in seconds from '1997:365:23:58:56.816'
-            (cxotime.CxoTime epoch)
-        state1 (dict): States for fixed dwell (pitch, roll, ccds, etc.)
-        state2 (dict): States for variable dwell (pitch, roll, ccds, etc.)
-        t_dwell1 (float, int): Fixed dwell duration in seconds, this is in the SCALED format
-        t_dwell2 (list, tuple): Variable dwell duration in seconds (this is the parameter that is optimized), the
-            optimization routine returns a list, though in this case we are only interested in the first value (only
-            value?), this is in the SCALED format
-        msid (str): Primary MSID for model being run
-        model_spec (dict, string): Dictionary of model parameters or file location where parameters can be imported
-        init (dict): Dictionary of Xija model initialization parameters
-        duration (:obj:`float`, optional): Duration for entire simulated schedule, defaults to 30 days (in seconds)
-        t_backoff (:obj:`float`, optional): Duration for tail end of simulated schedule used to determine convergence,
-            defaults to 10 days (in seconds)
-        pseudo (:obj:`str`, optional): Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
-            wishes to retrieve model results for this pseudo node, if it exists
-
-    Returns:
-        dict: Dictionary of results, keys are node names (e.g. 'aacccdpt', 'aca0'), values are Xija model component
+    :param datesecs: Date for start of simulation, in seconds from '1997:365:23:58:56.816' (cxotime.CxoTime epoch)
+    :type datesecs: float or int
+    :param state1: States for fixed dwell (pitch, roll, ccds, etc.)
+    :type state1: dict
+    :param state2: States for variable dwell (pitch, roll, ccds, etc.)
+    :type state2: dict
+    :param t_dwell1: Fixed dwell duration in seconds
+    :type t_dwell1: float or int
+    :param t_dwell2: Variable dwell duration in seconds (this is the parameter that is optimized)
+    :type t_dwell2: float or int
+    :param msid: Primary MSID for model being run
+    :type msid: str
+    :param model_spec: Dictionary of model parameters or file location where parameters can be imported
+    :type model_spec: dict, string
+    :param init: Dictionary of Xija model initialization parameters
+    :type init: dict
+    :param duration: Duration for entire simulated schedule, defaults to 30 days (in seconds)
+    :type duration: float, optional
+    :param t_backoff: Duration for tail end of simulated schedule used to determine convergence, defaults to 10 days
+        (in seconds)
+    :type t_backoff: float, optional
+    :param pseudo: Name of one or more pseudo MSIDs used in the model, if any, only necessary if one wishes to retrieve
+        model results for this pseudo node, if it exists. This currently is not used but kept here as a placeholder.
+    :type pseudo: str, optional
+    :returns:
+        - results (:py:class:`dict`) - keys are node names (e.g. 'aacccdpt', 'aca0'), values are Xija model component
             objects, this is the same object returned by `run_profile`
-        ndarray: Numpy array of time values input into Xija (may not exactly match Xija output)
-        ndarray: Numpy array of state markers, matching the time array output (may not exactly match Xija output)
+        - times (:py:class:`np.ndarray`) - time values input into Xija (may not exactly match Xija output)
+        - state_keys (:py:class:`npndarray`) - defines state order, with elements matching the time array output
+            (may not exactly match Xija output), this defines where to insert what state
 
-    Notes:
-        Keys in state1 must match keys in state2.
-        Keys in state1 must match Xija component names (e.g. 'pitch', 'ccd_count', 'sim_z')
-
+    Notes
+    -----
+        - Keys in state1 must match keys in state2.
+        - Keys in state1 must match Xija component names (e.g. 'pitch', 'ccd_count', 'sim_z')
     """
 
     num = np.int(duration / (t_dwell1 + t_dwell2))
@@ -315,39 +326,43 @@ def calc_binary_schedule(datesecs, state1, state2, t_dwell1, t_dwell2, msid, mod
         layout = [state1[key], state1[key], state2[key], state2[key]] * num
         schedule[key] = np.array(layout)
 
-    statekey = [1, 1, 2, 2] * num
-    statekey = np.array(statekey)
+    state_keys = [1, 1, 2, 2] * num
+    state_keys = np.array(state_keys)
 
     model_results = run_profile(times, schedule, msid, model_spec, init, pseudo=pseudo)
 
-    return model_results, times, statekey
+    return model_results, times, state_keys
 
 
-def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_spec, init, t_backoff,
-                   duration):
+def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_spec, init, t_backoff, duration):
     """ Generate a Xija model function with preset values, for use with an optimization routine.
 
-    Args:
-        datesecs (float, int): Date for start of simulation, in seconds from '1997:365:23:58:56.816'
-            (cxotime.CxoTime epoch)
-        dwell1_state (dict): States for fixed dwell (pitch, roll, ccds, etc.)
-        dwell2_state (dict): States for variable dwell (pitch, roll, ccds, etc.)
-        t_dwell1 (float, int): Fixed dwell duration in seconds, this is in the SCALED format
-        msid: msid (str): Primary MSID for model being run
-        model_spec (dict, string): Dictionary of model parameters or file location where parameters can be imported
-        init (dict): Dictionary of Xija model initialization parameters, can be empty
-        t_backoff (float): Duration for tail end of simulated schedule, used to determine convergence
-        duration (float): Duration for entire simulated schedule, defaults to 30 days (in seconds)
+    :param datesecs: Date for start of simulation, in seconds from '1997:365:23:58:56.816' (cxotime.CxoTime epoch)
+    :type datesecs: float or int
+    :param dwell1_state: States for fixed dwell (pitch, roll, ccds, etc.)
+    :type dwell1_state: dict
+    :param dwell2_state: States for variable dwell (pitch, roll, ccds, etc.)
+    :type dwell2_state: dict
+    :param t_dwell1: Fixed dwell duration in seconds
+    :type t_dwell1: float or int
+    :param msid: Primary MSID for model being run
+    :type msid: str
+    :param model_spec: Dictionary of model parameters or file location where parameters can be imported
+    :type model_spec: dict, string
+    :param init: Dictionary of Xija model initialization parameters
+    :type init: dict
+    :param t_backoff: Duration for tail end of simulated schedule used to determine convergence, defaults to 10 days
+        (in seconds)
+    :type t_backoff: float, optional
+    :param duration: Duration for entire simulated schedule, defaults to 30 days (in seconds)
+    :type duration: float, optional
+    :returns: Function generated from specified parameters, to be passed to optimization routine
+    :rtype: function
 
-    Returns:
-        function: Function generated from specified parameters, to be passed to optimization routine
-
-    Notes:
-
-        Keys in dwell1_state must match keys in dwell2_state.
-
-        Keys in dwell1_state must match Xija component names (e.g. 'pitch', 'ccd_count', 'sim_z')
-
+    Notes
+    -----
+        - Keys in state1 must match keys in state2.
+        - Keys in state1 must match Xija component names (e.g. 'pitch', 'ccd_count', 'sim_z')
     """
     def opt_binary_schedule(t):
         model_results, _, _ = calc_binary_schedule(datesecs, dwell1_state, dwell2_state, t_dwell1, t, msid,
@@ -369,28 +384,39 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
                       duration=2592000, t_backoff=1725000, n_dwells=10, max_dwell=None, pseudo=None):
     """ Determine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1, if any exists.
 
-    Args:
-        date (float, int, str): Date for start of simulation, in seconds from '1997:365:23:58:56.816', or any other
-            format readable by cxotime.CxoTime
-        dwell1_state (dict): States for fixed dwell (pitch, roll, ccds, etc.)
-        dwell2_state (dict): States for variable dwell (pitch, roll, ccds, etc.)
-        t_dwell1 (float, int): Fixed dwell duration in seconds
-        msid: msid (str): Primary MSID for model being run
-        limit (float): Temperature limit for primary MSID in model for this simulation
-        model_spec (dict, string): Dictionary of model parameters or file location where parameters can be imported
-        init (dict): Dictionary of Xija model initialization parameters, can be empty
-        limit_type (str): Type of limit, defaults to 'max' (a maximum temperature limit), other option is 'min'
-        duration (float): Duration for entire simulated schedule, defaults to 30 days (in seconds)
-        t_backoff (float): Duration for tail end of simulated schedule used to determine convergence, defaults to 10
-            days (in seconds)
-        n_dwells (int): Number of second dwell possibilities to run (more dwells = finer resolution)
-        max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
-        pseudo (:obj:`str`, optional): Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
-            wishes to retrieve model results for this pseudo node, if it exists - To be implemented at a later date
-
-    Returns:
-        dict: Dictionary of results information
-
+    :param date: Date for start of simulation, in seconds from '1997:365:23:58:56.816' (cxotime.CxoTime epoch) or any
+        other format readable by cxotime.CxoTime
+    :type date: float or int or str
+    :param dwell1_state: States for fixed dwell (pitch, roll, ccds, etc.)
+    :type dwell1_state: dict
+    :param dwell2_state: States for variable dwell (pitch, roll, ccds, etc.)
+    :type dwell2_state: dict
+    :param t_dwell1: Fixed dwell duration in seconds
+    :type t_dwell1: float or int
+    :param msid: Primary MSID for model being run
+    :type msid: str
+    :param limit: Temperature limit for primary MSID in model for this simulation
+    :type limit: float
+    :param model_spec: Dictionary of model parameters or file location where parameters can be imported
+    :type model_spec: dict, string
+    :param init: Dictionary of Xija model initialization parameters
+    :type init: dict
+    :param limit_type: Type of limit, defaults to 'max' (a maximum temperature limit), other option is 'min'
+    :type limit_type: str, optional
+    :param duration: Duration for entire simulated schedule, defaults to 30 days (in seconds)
+    :type duration: float, optional
+    :param t_backoff: Duration for tail end of simulated schedule used to determine convergence, defaults to 10 days
+        (in seconds)
+    :type t_backoff: float, optional
+    :param n_dwells: Number of second dwell, `t_dwell2`,  possibilities to run (more dwells = finer resolution)
+    :type n_dwells: int, optional
+    :param max_dwell: Maximum duration for second dwell, can be tuned to provide better results
+    :type max_dwell: float, optional
+    :param pseudo: Name of one or more pseudo MSIDs used in the model, if any, only necessary if one wishes to retrieve
+        model results for this pseudo node, if it exists. This currently is not used but kept here as a placeholder.
+    :type pseudo: str, optional
+    :returns: Dictionary of results information
+    :rtype: dict
     """
 
     datesecs = CxoTime(date).secs
@@ -465,14 +491,13 @@ def _handle_unconverged_hot(output, results):
     This is intended to be run solely by find_second_dwell(). This modifies the `results` dictionary inherited from the
     parent function to provide information about the case that came the closest to converging.
 
-    Args:
-        output (ndarray): Numpy array of maximum, mean, and minimum temperatures for each simulation generated, within
-            the last `t_backoff` duration (e.g. the last two thirds of `duration`) for the final refinement step.
-        results (dict): Results dictionary initialized in parent function
-
-    Returns:
-        dict: Dictionary of results information
-
+    :param output: Numpy array of maximum, mean, and minimum temperatures for each simulation generated, within the last
+        `t_backoff` duration (e.g. the last two thirds of `duration`) for the final refinement step.
+    :type output: np.ndarray
+    :param results: Results dictionary initialized in parent function
+    :type results: dict
+    :returns: Dictionary of results information
+    :rtype: dict
     """
 
     # You want the data for the case that is closest to the limit, in this case that is the data with the min value.
@@ -493,14 +518,13 @@ def _handle_unconverged_cold(output, results):
     This is intended to be run solely by find_second_dwell(). This modifies the `results` dictionary inherited from the
     parent function to provide information about the case that came the closest to converging.
 
-    Args:
-        output (ndarray): Numpy array of maximum, mean, and minimum temperatures for each simulation generated, within
-            the last `t_backoff` duration (e.g. the last two thirds of `duration`) for the final refinement step.
-        results (dict): Results dictionary initialized in parent function
-
-    Returns:
-        dict: Dictionary of results information
-
+    :param output: Numpy array of maximum, mean, and minimum temperatures for each simulation generated, within the last
+        `t_backoff` duration (e.g. the last two thirds of `duration`) for the final refinement step.
+    :type output: np.ndarray
+    :param results: Results dictionary initialized in parent function
+    :type results: dict
+    :returns: Dictionary of results information
+    :rtype: dict
     """
 
     # You want the data for the case that is closest to the limit, in this case that is the data with the max value.
@@ -522,20 +546,24 @@ def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results
     balance the dwell 1 time. This modifies the `results` dictionary inherited from the parent function, but also
     returns the `output` ndarray containing data from the final refinement operation.
 
-    Args:
-        limit_type (str): Type of limit, either a minimum or maximum temperature limit (needs to have 'min' or 'max' in
-            string passed to this argument
-        n_dwells (int): Number of second dwell possibilities to run (more dwells = finer resolution)
-        max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
-        limit (float): Limit in Celsius for current simulation
-        opt_fun (function): Function that runs the schedule defined by dwell1_state and dwell2_state
-        results (dict): Results dictionary initialized in parent function
-
-    Returns:
-        dict: Dictionary of results information
-        ndarray: Numpy array of maximum, mean, and minimum temperatures for each simulation generated, within the last
-            `t_backoff` duration (e.g. the last two thirds of `duration`) for the final refinement step.
-
+    :param limit_type: Type of limit, either a minimum or maximum temperature limit (needs to have 'min' or 'max' in
+        string passed to this argument
+    :type limit_type: str
+    :param n_dwells: Number of second dwell possibilities to run (more dwells = finer resolution)
+    :type n_dwells: int
+    :param max_dwell: Maximum duration for second dwell, can be tuned to provide better results
+    :type max_dwell: float
+    :param limit: Limit in Celsius for current simulation
+    :type limit: float
+    :param opt_fun: Function that runs the schedule defined by dwell1_state and dwell2_state
+    :type opt_fun: function
+    :param results: Results dictionary initialized in parent function
+    :type results: dict
+    :returns:
+        - results (:py:class:`dict`) - Dictionary of results information
+        - times (:py:class:`np.ndarray`) - Numpy array of maximum, mean, and minimum temperatures for each simulation
+            generated, within the last`t_backoff` duration (e.g. the last two thirds of `duration`) for the final
+            refinement step.
     """
 
     # This is the configuration for working with a max temperature limit (as opposed to a min temperature limit).
@@ -608,49 +636,56 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                     limit_type='max', max_dwell=None, n_dwells=10, shared_data=None):
     """ Determine dwell balance times for a set of cases.
 
-    Args:
-        msid: msid (str): Primary MSID for model being run
-        model_spec (dict, string): Dictionary of model parameters or file location where parameters can be imported
-        init (dict): Dictionary of Xija model initialization parameters, can be empty
-        limit (float): Temperature limit for primary MSID in model for this simulation
-        date (float, int, str): Date for start of simulation, in seconds from '1997:365:23:58:56.816', or any other
-            format readable by cxotime.CxoTime
-        dwell_1_duration (float, int): Duration in seconds of dwell 1, also viewed as the known or defined dwell
-            duration, for which one wants to find a complementary dwell duration (dwell duration 2)
-        state_pairs: Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states, see
-            state_pair section below for further details
-        state_pair_dtype (list): List of name + Numpy data type pairs for each simulation
-        limit_type (str): Type of limit, defaults to 'max' (a maximum temperature limit), other option is 'min'
-        max_dwell (float): Maximum duration for second dwell, can be tuned to provide better results
-        n_dwells (int): Number of second dwell possibilities to run (more dwells = finer resolution)
-        shared_data (list): Shared list of results, used when running multiple `run_state_pairs` threads in parallel via
-            the multiprocessing package
+    :param msid: Primary MSID for model being run
+    :type msid: str
+    :param model_spec: Dictionary of model parameters or file location where parameters can be imported
+    :type model_spec: dict, string
+    :param init: Dictionary of Xija model initialization parameters
+    :type init: dict
+    :param limit: Temperature limit for primary MSID in model for this simulation
+    :type limit: float
+    :param date: Date for start of simulation, in seconds from '1997:365:23:58:56.816' (cxotime.CxoTime epoch) or any
+        other format readable by cxotime.CxoTime
+    :type date: float or int or str
+    :param dwell_1_duration: Duration in seconds of dwell 1, also viewed as the known or defined dwell duration, for
+        which one wants to find a complementary dwell duration (dwell duration 2)
+    :type dwell_1_duration: float or int
+    :param state_pairs: Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states,
+        see state_pair section below for further details
+    :type state_pairs: list or tuple
+    :param state_pair_dtype: List of name + Numpy data type pairs for each simulation
+    :type state_pair_dtype: list
+    :param limit_type: Type of limit, defaults to 'max' (a maximum temperature limit), other option is 'min'
+    :type limit_type: str, optional
+    :param max_dwell: Maximum duration for second dwell, can be tuned to provide better results
+    :type max_dwell: float, optional
+    :param n_dwells: Number of second dwell, `t_dwell2`,  possibilities to run (more dwells = finer resolution)
+    :type n_dwells: int, optional
+    :param shared_data: Shared list of results, used when running multiple `run_state_pairs` threads in parallel via
+        the multiprocessing package
+    :type shared_data: multiprocessing.managers.ListProxy, optoinal
+    :returns: Structured numpy array of results
+    :rtype: np.ndarray
 
-    Returns:
-        Structured numpy array of results
+    State Pairs Data Structure
+    --------------------------
+    The state pairs data structure, `state_pairs`, are pairs of dictionaries specifying the two conditions used for a
+    Timbre simulation. The keys in these dictionaries must match the Xija component names they refer to (e.g. 'pitch',
+    'ccd_count', 'cossrbx_on', etc.).
 
+    State information that does not change from dwell1 to dwell2 can be specified in the model initialization
+    dictionary. `init`. State information that does change from dwell1 to dwell2 should be specified in the state pairs
+    dictionary described above. Dictionary names for states should match those expected by Xija (e.g. fep_count, roll,
+    sim_z).
 
-    State Pairs Data Structure:
-        The state pairs data structure, `state_pairs`, are pairs of dictionaries specifying the two conditions used for
-        a Timbre simulation. The keys in these dictionaries must match the Xija component names they refer to (e.g.
-        'pitch', 'ccd_count', 'cossrbx_on', etc.).
-
-        State information that does not change from dwell1 to dwell2 can be specified in the model initialization
-        dictionary. `init`. State information that does change from dwell1 to dwell2 should be specified in the state
-        pairs dictionary described above. Dictionary names for states should match those expected by Xija (e.g.
-        fep_count, roll, sim_z).
-
-
-    Example:
-
+    Example
+    -------
         model_init = {'aacccdpt': {'aacccdpt': -7., 'aca0': -7., 'eclipse': False}, }
-
         model_specs = load_model_specs()
         date = '2021:001:00:00:00'
         t_dwell1 = 20000.
         msid = 'aacccdpt'
         limit = -7.1
-
         state_pairs = (({'pitch': 144.2}, {'pitch': 154.95}),
                        ({'pitch': 90.2}, {'pitch': 148.95}),
                        ({'pitch': 50}, {'pitch': 140}),
@@ -658,12 +693,10 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                        ({'pitch': 75}, {'pitch': 130}),
                        ({'pitch': 170}, {'pitch': 90}),
                        ({'pitch': 90}, {'pitch': 170}))
-
         state_pair_dtype = {'pitch', np.float64}
 
         results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs,
             state_pair_dtype)
-
     """
 
     duration = 30 * 24 * 3600.
