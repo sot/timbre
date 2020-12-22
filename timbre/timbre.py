@@ -109,7 +109,7 @@ def get_full_dtype(state_pair_dtype_dict):
 
     Example input
     -------------
-    state_pair_dtype_dict = {'pitch': np.float64, 'roll': np.float64}
+        state_pair_dtype_dict = {'pitch': np.float64, 'roll': np.float64}
     """
 
     full_results_dtype = copy(base_dtype)
@@ -190,12 +190,10 @@ def setup_model(msid, t0, t1, model_spec, init):
 
     Example
     -------
-    model_specs = load_model_specs()
-
-    init = {'1dpamzt': 35., 'dpa0': 35., 'eclipse': False, 'roll': 0, 'vid_board': True, 'pitch':155,
-            'clocking': True, 'fep_count': 5, 'ccd_count': 5, 'sim_z': 100000}
-
-    model = setup_model('1dpamzt', '2019:001:00:00:00', '2019:010:00:00:00', model_specs['1dpamzt'], init)
+        model_specs = load_model_specs()
+        init = {'1dpamzt': 35., 'dpa0': 35., 'eclipse': False, 'roll': 0, 'vid_board': True, 'pitch':155,
+                'clocking': True, 'fep_count': 5, 'ccd_count': 5, 'sim_z': 100000}
+        model = setup_model('1dpamzt', '2019:001:00:00:00', '2019:010:00:00:00', model_specs['1dpamzt'], init)
 
     Notes
     -----
@@ -236,19 +234,13 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
 
     Example
     -------
-
-    times = np.array(CxoTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00', 2019:003:00:00:00']).secs)
-
-    pitch = np.array([150, 90, 156, 156])
-
-    schedule = {'pitch': pitch}
-
-    model_specs = load_model_specs()
-
-    init = {'1dpamzt': 20., 'dpa0': 20., 'eclipse': False, 'roll': 0, 'vid_board': True, 'clocking': True,
-            'fep_count': 5, 'ccd_count': 5, 'sim_z': 100000}
-
-    results = run_profile(times, pitch, '1dpamzt', model_specs['1dpamzt'], init, pseudo='dpa0')
+        times = np.array(CxoTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00', 2019:003:00:00:00']).secs)
+        pitch = np.array([150, 90, 156, 156])
+        schedule = {'pitch': pitch}
+        model_specs = load_model_specs()
+        init = {'1dpamzt': 20., 'dpa0': 20., 'eclipse': False, 'roll': 0, 'vid_board': True, 'clocking': True,
+                'fep_count': 5, 'ccd_count': 5, 'sim_z': 100000}
+        results = run_profile(times, pitch, '1dpamzt', model_specs['1dpamzt'], init, pseudo='dpa0')
 
     Notes
     -----
