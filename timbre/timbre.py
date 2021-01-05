@@ -44,8 +44,7 @@ def load_model_specs():
     :return: A dictionary containing the model specifications for all available Xija models
     :rtype: dict
 
-    Note
-    ----
+    Note:
     This will need to be updated as new models are approved or existing models are renamed.
     """
 
@@ -56,7 +55,7 @@ def load_model_specs():
             chandra_models/chandra_models/xija/directory
         :param internet:: Availability of an internet connection, for accessing github.com
 
-        :return: JSON file stored as a dictionary, containing Xija model parameters
+        :return: JSON file stored as a dictionary, md5 hash of file
         """
 
         url = 'https://raw.githubusercontent.com/sot/chandra_models/master/chandra_models/xija/'
@@ -107,8 +106,8 @@ def get_full_dtype(state_pair_dtype_dict):
     :return: List of Numpy data types, including items specific to current model (e.g. pitch, roll, ccd_count, etc.)
     :rtype: list
 
-    Example input
-    -------------
+    Example input::
+
         state_pair_dtype_dict = {'pitch': np.float64, 'roll': np.float64}
     """
 
@@ -175,32 +174,32 @@ def setup_model(msid, t0, t1, model_spec, init):
     streamlined method to creating Xija models that can take both single value data and time defined data
     (e.g. [pitch1, pitch2, pitch3], [time1, time2, time3]), defined in the `init` dictionary.
 
-     :param msid: Primary MSID for model; in this case it can be anything as it is only being used to name the model,
-            however keeping the convention to name the model after the primary MSID being predicted reduces confusion
-     :type msid: str
-     :param t0: Start time for model prediction; this can be any format that cxotime.CxoTime accepts
-     :type t0: str or float or int
-     :param t1: End time for model prediction; this can be any format that cxotime.CxoTime accepts
-     :type t1: str or float or int
-     :param model_spec: Dictionary of model parameters or file location where parameters can be imported
-     :type model_spec: dict, str
-     :param init: Dictionary of Xija model initialization parameters, can be empty
-     :type init: dict
-     :rtype: xija.model.XijaModel
+    :param msid: Primary MSID for model; in this case it can be anything as it is only being used to name the model,
+           however keeping the convention to name the model after the primary MSID being predicted reduces confusion
+    :type msid: str
+    :param t0: Start time for model prediction; this can be any format that cxotime.CxoTime accepts
+    :type t0: str or float or int
+    :param t1: End time for model prediction; this can be any format that cxotime.CxoTime accepts
+    :type t1: str or float or int
+    :param model_spec: Dictionary of model parameters or file location where parameters can be imported
+    :type model_spec: dict, str
+    :param init: Dictionary of Xija model initialization parameters, can be empty
+    :type init: dict
+    :rtype: xija.model.XijaModel
 
-    Example
-    -------
+    Example::
+
         model_specs = load_model_specs()
         init = {'1dpamzt': 35., 'dpa0': 35., 'eclipse': False, 'roll': 0, 'vid_board': True, 'pitch':155,
                 'clocking': True, 'fep_count': 5, 'ccd_count': 5, 'sim_z': 100000}
         model = setup_model('1dpamzt', '2019:001:00:00:00', '2019:010:00:00:00', model_specs['1dpamzt'], init)
 
-    Notes
-    -----
-    This does not run the model, only sets up the model to be run.
+    Notes:
 
-    Any parameters not specified in `init` will either need to be pulled from telemetry or explicitly defined outside of
-    this function before running the model.
+     - This does not run the model, only sets up the model to be run.
+     - Any parameters not specified in `init` will either need to be pulled from telemetry or explicitly defined \
+     outside of this function before running the model.
+
     """
 
     model = xija.ThermalModel(msid, start=t0, stop=t1, model_spec=model_spec)
@@ -232,8 +231,8 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
     :returns: Results, keys are node names (e.g. 'aacccdpt', 'aca0'), values are Xija model component objects
     :rtype: dict
 
-    Example
-    -------
+    Example::
+
         times = np.array(CxoTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00', 2019:003:00:00:00']).secs)
         pitch = np.array([150, 90, 156, 156])
         schedule = {'pitch': pitch}
@@ -242,8 +241,8 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
                 'fep_count': 5, 'ccd_count': 5, 'sim_z': 100000}
         results = run_profile(times, pitch, '1dpamzt', model_specs['1dpamzt'], init, pseudo='dpa0')
 
-    Notes
-    -----
+    Note:
+
     Any parameters specified in `init` will be overwritten by those specified in the body of this function, if they
     happen to be defined in both places.
     """
@@ -297,14 +296,15 @@ def calc_binary_schedule(datesecs, state1, state2, t_dwell1, t_dwell2, msid, mod
         model results for this pseudo node, if it exists. This currently is not used but kept here as a placeholder.
     :type pseudo: str, optional
     :returns:
-        - results (:py:class:`dict`) - keys are node names (e.g. 'aacccdpt', 'aca0'), values are Xija model component
+        - **results** (:py:class:`dict`) - keys are node names (e.g. 'aacccdpt', 'aca0'), values are Xija model component
             objects, this is the same object returned by `run_profile`
-        - times (:py:class:`np.ndarray`) - time values input into Xija (may not exactly match Xija output)
-        - state_keys (:py:class:`npndarray`) - defines state order, with elements matching the time array output
+        - **times** (:py:class:`np.ndarray`) - time values input into Xija (may not exactly match Xija output)
+        - **state_keys** (:py:class:`np.ndarray`) - defines state order, with elements matching the time array output
             (may not exactly match Xija output), this defines where to insert what state
+    :rtype: tuple
 
-    Notes
-    -----
+    Notes:
+
         - Keys in state1 must match keys in state2.
         - Keys in state1 must match Xija component names (e.g. 'pitch', 'ccd_count', 'sim_z')
     """
@@ -351,8 +351,8 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
     :returns: Function generated from specified parameters, to be passed to optimization routine
     :rtype: function
 
-    Notes
-    -----
+    Notes:
+
         - Keys in state1 must match keys in state2.
         - Keys in state1 must match Xija component names (e.g. 'pitch', 'ccd_count', 'sim_z')
     """
@@ -659,8 +659,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
     :returns: Structured numpy array of results
     :rtype: np.ndarray
 
-    State Pairs Data Structure
-    --------------------------
+    State Pairs Data Structure:
+
     The state pairs data structure, `state_pairs`, are pairs of dictionaries specifying the two conditions used for a
     Timbre simulation. The keys in these dictionaries must match the Xija component names they refer to (e.g. 'pitch',
     'ccd_count', 'cossrbx_on', etc.).
@@ -670,8 +670,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
     dictionary described above. Dictionary names for states should match those expected by Xija (e.g. fep_count, roll,
     sim_z).
 
-    Example
-    -------
+    Example::
+
         model_init = {'aacccdpt': {'aacccdpt': -7., 'aca0': -7., 'eclipse': False}, }
         model_specs = load_model_specs()
         date = '2021:001:00:00:00'
