@@ -426,8 +426,8 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
     results = {'converged': False, 'unconverged_hot': False, 'unconverged_cold': False,
                'min_temp': np.nan, 'mean_temp': np.nan, 'max_temp': np.nan, 'temperature_limit': limit,
-               'dwell_2_time': np.nan, 'dwell_2_time_limit': max_dwell, 'min_pseudo': np.nan, 'mean_pseudo': np.nan,
-               'max_pseudo': np.nan, 'hotter_state': np.nan, 'colder_state': np.nan}
+               'dwell_2_time': np.nan, 'min_pseudo': np.nan, 'mean_pseudo': np.nan,  'max_pseudo': np.nan,
+               'hotter_state': np.nan, 'colder_state': np.nan}
 
     # Ensure t_dwell1 is a float, may not be necessary anymore
     t_dwell1 = np.float(t_dwell1)
@@ -599,8 +599,8 @@ def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results
                                  ('min', np.float64)])
 
         # In rare conditions where all 'x' values are very close and 'wobble' a bit, it may not be sorted. If it
-        # is not sorted, the quadratic method will result in an error. It seems as if the linear method is more
-        # tolerant of this condition.
+        # is not sorted, the quadratic method will result in an error. The linear method is more tolerant of this
+        # # condition.
         try:
             f_dwell_2_time = interpolate.interp1d(output[max_min], output['duration2'], kind='quadratic',
                                                   assume_sorted=False)
@@ -615,9 +615,9 @@ def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results
             f_mean_temp = interpolate.interp1d(output[max_min], output['mean'], kind='linear', assume_sorted=False)
 
         results[max_min + '_temp'] = limit
-        results['dwell_2_time'] = f_dwell_2_time(limit)
-        results['mean_temp'] = f_mean_temp(limit)
-        results[min_max + '_temp'] = f_non_limit_temp(limit)
+        results['dwell_2_time'] = f_dwell_2_time(limit).item()
+        results['mean_temp'] = f_mean_temp(limit).item()
+        results[min_max + '_temp'] = f_non_limit_temp(limit).item()
 
     results['converged'] = True
 
@@ -716,20 +716,13 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                datesecs,
                limit,
                dwell_1_duration,
-               dwell_results['dwell_2_time'].item() if type(dwell_results['dwell_2_time']) is np.ndarray else
                dwell_results['dwell_2_time'],
-               dwell_results['min_temp'].item() if type(dwell_results['min_temp']) is np.ndarray else dwell_results[
-                   'min_temp'],
-               dwell_results['mean_temp'].item() if type(dwell_results['mean_temp']) is np.ndarray else dwell_results[
-                   'mean_temp'],
-               dwell_results['max_temp'].item() if type(dwell_results['max_temp']) is np.ndarray else dwell_results[
-                   'max_temp'],
-               dwell_results['min_pseudo'].item() if type(dwell_results['min_pseudo']) is np.ndarray else dwell_results[
-                   'min_pseudo'],
-               dwell_results['mean_pseudo'].item() if type(dwell_results['mean_pseudo']) is np.ndarray else
+               dwell_results['min_temp'],
+               dwell_results['mean_temp'],
+               dwell_results['max_temp'],
+               dwell_results['min_pseudo'],
                dwell_results['mean_pseudo'],
-               dwell_results['max_pseudo'].item() if type(dwell_results['max_pseudo']) is np.ndarray else dwell_results[
-                   'max_pseudo'],
+               dwell_results['max_pseudo'],
                dwell_results['converged'],
                dwell_results['unconverged_hot'],
                dwell_results['unconverged_cold'],
