@@ -86,9 +86,7 @@ def test_run_state_pairs():
 
     state_pair_dtype = {'pitch': np.float64}
 
-    results_dtype = timbre.get_full_dtype(state_pair_dtype)
-
     results = timbre.run_state_pairs(msid, aca_model_spec, model_init[msid], limit, date, t_dwell1, state_pairs,
-                                     results_dtype)
+                                     state_pair_dtype)
 
     assert isinstance(results, np.ndarray)

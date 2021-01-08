@@ -645,8 +645,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
     :param state_pairs: Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states,
         see state_pair section below for further details
     :type state_pairs: list or tuple
-    :param state_pair_dtype: List of name + Numpy data type pairs for each simulation
-    :type state_pair_dtype: list
+    :param state_pair_dtype: Dictionary of name + Numpy data type pairs for the unique input parameters for each case
+    :type state_pair_dtype: dict
     :param limit_type: Type of limit, defaults to 'max' (a maximum temperature limit), other option is 'min'
     :type limit_type: str, optional
     :param max_dwell: Maximum duration for second dwell, can be tuned to provide better results
@@ -690,6 +690,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
         results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs,
             state_pair_dtype)
     """
+
+    results_dtype = get_full_dtype(state_pair_dtype)
 
     duration = 30 * 24 * 3600.
     t_backoff = 2 * duration / 3
@@ -737,7 +739,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
 
         results.append(tuple(row))
 
-    results_array = np.array(results, dtype=state_pair_dtype)
+    results_array = np.array(results, dtype=results_dtype)
 
     if shared_data is not None:
         shared_data.append(results_array)
