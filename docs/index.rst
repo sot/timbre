@@ -248,6 +248,9 @@ still included here for completeness, along with descriptions of the additional 
  - `pitch1`: This is the pitch used as an input to a given simulation corresponding to the dwell #1 state.
  - `pitch2`: This is the pitch used as an input to a given simulation corresponding to the dwell #2 state.
 
+Results
+-------
+
     >>> import astropy
     >>> astropy.table.Table(results)
 
