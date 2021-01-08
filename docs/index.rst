@@ -308,10 +308,11 @@ Each number corresponds to a row in the above results:
 Using Multiprocessing to Generate Large Batches of Results
 ==========================================================
 
-Please see the file `run_tank_characterization.py` for an example on how to use the `multiprocessing` package to
-facilitate the generation of large batches of results to characterize the general behavior of a Xija thermal model. This
-example produces a set of hdf5 files that will need to be combined or "stacked" as a post processing step. Some of the
-functionality present in this example will eventually be included as package level methods.
+Please see the file `run_tank_characterization.py` in the root directory of the timbre package for an example on how to
+use the `multiprocessing` package to facilitate the generation of large batches of results to characterize the general
+behavior of a Xija thermal model. This example produces a set of hdf5 files that will need to be combined or "stacked"
+as a post processing step. Some of the functionality present in this example will eventually be included as package
+level methods.
 
 
 .. The toctree directive is kept below for future enhancement, however currently it does not produce any resulting text.
