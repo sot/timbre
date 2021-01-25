@@ -1,21 +1,10 @@
 
-import json
-import re
-from urllib.request import urlopen
-import pandas as pd
-# import seaborn as sns
-import requests
 import numpy as np
-import dash_html_components as html
-import plotly.io as pio
-import plotly.graph_objects as go
-
-from datetime import datetime
 import plotly.express as px
+from datetime import datetime
 
 from cxotime import CxoTime
 
-import plotly.express as px
 
 time_axis_format = [
     #         dict(dtickrange=[None, 600000], value="%H:%M:%S.%L\n"),
@@ -56,6 +45,13 @@ legend_format = {
     'family': font,
     'size': 16,
     'color': "#666666",
+}
+
+legend_format_top_right= {
+    'yanchor': "top",
+    'y': 0.99,
+    'xanchor': "right",
+    'x': 0.99
 }
 
 colors = px.colors.qualitative.D3
