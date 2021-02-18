@@ -95,6 +95,8 @@ def load_model_specs():
     model_specs['pm1thv2t'], model_specs['pm1thv2t_hash'] = get_model('mups_valve/pm1thv2t_spec.json', internet)
     model_specs['pm2thv1t'], model_specs['pm2thv1t_hash'] = get_model('mups_valve/pm2thv1t_spec.json', internet)
 
+    model_specs['fptemp_11'] = model_specs['fptemp']  # For backwards compatibility
+
     return model_specs
 
 
@@ -625,7 +627,7 @@ def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results
 
 
 def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state_pairs, state_pair_dtype,
-                    limit_type='max', max_dwell=None, n_dwells=10, shared_data=None):
+                    limit_type='max', max_dwell=None, n_dwells=10, print_progress=True, shared_data=None):
     """ Determine dwell balance times for a set of cases.
 
     :param msid: Primary MSID for model being run
@@ -703,7 +705,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
     num = np.float(len(state_pairs))
     for n, pair in enumerate(state_pairs):
 
-        if np.mod(n, 1000) == 0:
+        if print_progress and (np.mod(n, 1000) == 0):
             print("Running simulations for state pair #: {} out of {}".format(n + 1, num))
 
         dwell1_state = pair[0]
