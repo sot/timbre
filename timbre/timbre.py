@@ -663,7 +663,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                        'pm2thv1t': ['mups0', ],
                        '1deamzt': ['dea0', ],
                        '1dpamzt': ['dpa0', ],
-                       'fptemp_11': ['fptemp', '1cbat', 'sim_px'],
+                       'fptemp': ['fptemp', '1cbat', 'sim_px'],
                        '1pdeaat': ['pin1at', ]}
 
     base_dtype = [('msid', string_dtype('utf-8', 20)),

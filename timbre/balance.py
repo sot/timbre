@@ -108,9 +108,9 @@ class Balance(object):
                            for p2 in self.pitch_range)
 
         if np.isnan(t_1):
-            msg1 = f'Either {self.msid} is not limited at a pitch of {pitch_1} degrees, '
-            msg2 = 'or there was an error passing the associated dwell duration.'
-            print(msg1 + msg2)
+            msg1 = f'Either {self.msid} is not limited at a pitch of {pitch_1} degrees near {CxoTime(datesecs).date},' \
+                   f' or there was an error passing the associated dwell duration (received as: {str(t_1)}).'
+            print(msg1)
             return None
 
         args = (self.msid, self.model_spec, self.model_init, limit, datesecs, t_1, state_pairs)
