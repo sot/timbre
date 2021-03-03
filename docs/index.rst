@@ -522,19 +522,14 @@ to characterize by Timbre and Pyger.
 This analysis can now be repeated for different "anchoring" conditions, and for different models.
 
 
-.. The toctree directive is kept below for future enhancement, however currently it does not produce any resulting text.
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-
 API documentation
 =================
 
 .. automodule:: timbre.timbre
    :members:
 
+.. automodule:: timbre.balance
+   :members:
 
 Indices and tables
 ==================
