@@ -377,6 +377,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     """
 
     datesecs = CxoTime(date).secs
+    msid = msid.lower()
 
     if 'max' in limit_type.lower():
         limit_type = 'max'
@@ -688,6 +689,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
     t_backoff = 2 * duration / 3
     datestr = CxoTime(date).date[:8]
     datesecs = CxoTime(date).secs
+    msid = msid.lower()
 
     results = []
 
@@ -723,7 +725,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                dwell_results['colder_state']]
 
         for key, value in init.items():
-            if key not in non_state_names[msid] and key not in dwell1_state:
+            if key not in non_state_names[msid] and key not in dwell1_state and key not in msid:
                 dwell1_state[key] = value
                 dwell2_state[key] = value
 

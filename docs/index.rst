@@ -183,26 +183,10 @@ It should be noted that this set of cases will all use the same initial dwell ti
     >>>                ({'pitch': 170}, {'pitch': 90}),
     >>>                ({'pitch': 90}, {'pitch': 170}))
 
-Defining Return Datatypes
--------------------------
-
-When running a single case it is easy to track of the inputs, such as pitch, CCD count, etc., so the data returned by
-the `find_second_dwell` function does not include this information. When running multiple cases this task can become
-more challenging. To facilitate easier tracking of this information, the `run_state_pairs` function includes this data
-with each model result in a Numpy structured array, however one needs to define the data types used for each case to
-avoid the need to infer data types (to be explicit).
-
-In this case (aacccdpt model), there is only one type of information supplied for a given case, pitch. Since there is
-only one type of information supplied, the dictionary containing this data has only one entry. If other information,
-such as `roll`, `fep_count`, or `quaternion`, are supplied as inputs, these should also have associated return datatypes
-defined here.
-
-    >>> state_pair_dtype = {'pitch': np.float64}
-
 Calculate Results
 -----------------
 
-    >>> results = run_state_pairs(msid, aca_model_spec, model_init, limit, date, t_dwell1, state_pairs,  state_pair_dtype, limit_type='max')
+    >>> results = run_state_pairs(msid, aca_model_spec, model_init, limit, date, t_dwell1, state_pairs,  limit_type='max')
 
 Explanation of Results Format
 -----------------------------
@@ -251,7 +235,9 @@ still included here for completeness, along with descriptions of the additional 
  - `colder_state`: This is an integer indicating which state is colder, 1 or 2, and is actually redundant with
    `hotter_state`.
  - `pitch1`: This is the pitch used as an input to a given simulation corresponding to the dwell #1 state.
+ - `eclipse1`: This is the eclipse state used as an input to a given simulation corresponding to the dwell #1 state.
  - `pitch2`: This is the pitch used as an input to a given simulation corresponding to the dwell #2 state.
+ - `eclipse2`: This is the eclipse state used as an input to a given simulation corresponding to the dwell #2 state.
 
 Results
 -------
@@ -261,29 +247,7 @@ One can use Astropy to display a table similar to that shown below.
     >>> import astropy
     >>> astropy.table.Table(results)
 
-.. _table-label:
-
-.. table:: Table of results from `run_state_pairs`
-
- +----------+----------+---------------+---------+----------+------------+----------+-----------+----------+------------+-------------+------------+-----------+-----------------+------------------+--------------+--------------+---------+---------+
- | msid     | date     | datesecs      | limit   | t_dwell1 | t_dwell2   | min_temp | mean_temp | max_temp | min_pseudo | mean_pseudo | max_pseudo | converged | unconverged_hot | unconverged_cold | hotter_state | colder_state | pitch1  | pitch2  |
- +----------+----------+---------------+---------+----------+------------+----------+-----------+----------+------------+-------------+------------+-----------+-----------------+------------------+--------------+--------------+---------+---------+
- | bytes20  | bytes8   | float64       | float64 | float64  | float64    | float64  | float64   | float64  | float64    | float64     | float64    | bool      | bool            | bool             | int8         | int8         | float64 | float64 |
- +==========+==========+===============+=========+==========+============+==========+===========+==========+============+=============+============+===========+=================+==================+==============+==============+=========+=========+
- | aacccdpt | 2021:001 | 725846469.184 | -6.5    | 21500.0  | nan        | -8.212   | -8.162    | -8.125   | nan        | nan         | nan        | False     | False           | True             | 1            | 2            | 144.2   | 154.95  |
- +----------+----------+---------------+---------+----------+------------+----------+-----------+----------+------------+-------------+------------+-----------+-----------------+------------------+--------------+--------------+---------+---------+
- | aacccdpt | 2021:001 | 725846469.184 | -6.5    | 21500.0  | 53870.627  | -7.279   | -6.849    | -6.5     | nan        | nan         | nan        | True      | False           | False            | 1            | 2            | 90.2    | 148.95  |
- +----------+----------+---------------+---------+----------+------------+----------+-----------+----------+------------+-------------+------------+-----------+-----------------+------------------+--------------+--------------+---------+---------+
- | aacccdpt | 2021:001 | 725846469.184 | -6.5    | 21500.0  | 169599.705 | -6.966   | -6.730    | -6.5     | nan        | nan         | nan        | True      | False           | False            | 2            | 1            | 50.0    | 140.0   |
- +----------+----------+---------------+---------+----------+------------+----------+-----------+----------+------------+-------------+------------+-----------+-----------------+------------------+--------------+--------------+---------+---------+
- | aacccdpt | 2021:001 | 725846469.184 | -6.5    | 21500.0  | nan        | 0.811    | 0.867     | 0.968    | nan        | nan         | nan        | False     | True            | False            | 1            | 2            | 90.0    | 100.0   |
- +----------+----------+---------------+---------+----------+------------+----------+-----------+----------+------------+-------------+------------+-----------+-----------------+------------------+--------------+--------------+---------+---------+
- | aacccdpt | 2021:001 | 725846469.184 | -6.5    | 21500.0  | nan        | -2.006   | -1.933    | -1.782   | nan        | nan         | nan        | False     | True            | False            | 1            | 2            | 75.0    | 130.0   |
- +----------+----------+---------------+---------+----------+------------+----------+-----------+----------+------------+-------------+------------+-----------+-----------------+------------------+--------------+--------------+---------+---------+
- | aacccdpt | 2021:001 | 725846469.184 | -6.5    | 21500.0  | 40794.685  | -7.861   | -7.200    | -6.5     | nan        | nan         | nan        | True      | False           | False            | 2            | 1            | 170.0   | 90.0    |
- +----------+----------+---------------+---------+----------+------------+----------+-----------+----------+------------+-------------+------------+-----------+-----------------+------------------+--------------+--------------+---------+---------+
- | aacccdpt | 2021:001 | 725846469.184 | -6.5    | 21500.0  | 10489.298  | -7.001   | -6.766    | -6.5     | nan        | nan         | nan        | True      | False           | False            | 1            | 2            | 90.0    | 170.0   |
- +----------+----------+---------------+---------+----------+------------+----------+-----------+----------+------------+-------------+------------+-----------+-----------------+------------------+--------------+--------------+---------+---------+
+.. include:: run_state_pairs_example_output_table.rst
 
 Discussion of Results
 ---------------------
@@ -311,16 +275,6 @@ Each number corresponds to a row in the above results:
 7. This simulation included a dwell #1 pitch of 90.0 degrees, and a dwell #2 pitch of 170.0 degrees. This solution
    converged with a dwell #2 duration of approximately 10489 seconds at 170.0 degrees pitch calculated to sufficiently
    balance 21500 seconds at 90.0 degrees pitch on 2021:001.
-
-
-Using Multiprocessing to Generate Large Batches of Results
-==========================================================
-
-Please see the file `run_tank_characterization.py` in the root directory of the timbre package for an example on how to
-use the `multiprocessing` package to facilitate the generation of large batches of results to characterize the general
-behavior of a Xija thermal model. This example produces a set of hdf5 files that will need to be combined or "stacked"
-as a post processing step. Some of the functionality present in this example will eventually be included as package
-level methods.
 
 Background: How Timbre Works
 ============================
@@ -365,7 +319,7 @@ between two "balanced" dwells results in a relatively steady temperature profile
 not exceeding the limit. In the interest of minimizing unnecessary data generation this entire profile is not returned
 by Timbre, instead Timbre returns the duration of the second state, some descriptive information about the solution, and
 any inputs necessary for characterizing the each state (e.g. pitch, ccd_count, etc.) as described in the Basic and
-Intermediate Usage sections.
+Batch Processing sections.
 
 The plot below demonstrates the conceptual output of Timbre:
 
@@ -409,8 +363,8 @@ model needs 53871 seconds at 148.95 degrees pitch to maintain a balanced profile
 Simulation" plot above for a more detailed view of the schedule with this interpolated dwell #2 time.
 
 
-Using Timbre to Characterize a Model
-====================================
+Using Timbre to Characterize a Model the Original Way
+=====================================================
 
 Now that the methodology behind how Timbre calculates a single balance time has been presented, the next step is to
 expand this capability to characterize a model by varying the input parameters.
@@ -434,8 +388,8 @@ hot initial dwell in terms of cooling time.
 
 Instead of defining each pitch condition manually, they are defined programatically.
 
-    >>> state_pairs = list(({'pitch': p1}, {'pitch': p2}) for p1 in range(45, 181, 5) for p2 in range(45, 181, 5))
-    >>> results = run_state_pairs(msid, aca_model_spec, model_init, limit, date, t_dwell1, state_pairs, state_pair_dtype, limit_type='max')
+    >>> state_pairs = [({'pitch': p1}, {'pitch': p2}) for p1 in range(45, 181, 5) for p2 in range(45, 181, 5)]
+    >>> results = run_state_pairs(msid, aca_model_spec, model_init, limit, date, t_dwell1, state_pairs, limit_type='max')
 
 |
 
@@ -464,7 +418,7 @@ hot time at 90 degrees pitch requires approximately 9.750Ks of cold time to bala
 blue line), therefore the cooling (blue) data does not represent the time necessary to balance the shown heating (red)
 dwells.
 
-The next section describes how to produce heating and cooling dwell times that do balance each other, and can
+The next section describes how to produce heating and cooling dwell times that do balance each other, and can be
 intuitively displayed on the same chart.
 
 
@@ -494,7 +448,6 @@ First, as before, we load the model and define the baseline conditions
     >>> date = '2021:001:00:00:00'
     >>> aca_model_spec, aca_md5 = get_local_model('../timbre/tests/data/aca_spec.json')
     >>> model_init = {'aacccdpt': -6.5, 'aca0': -6.5, 'eclipse': False}
-    >>> state_pair_dtype = {'pitch': np.float64}
 
 |
 
@@ -512,8 +465,8 @@ cooling pitch values, as it is best not to assume which attitudes cool or heat.
 
     >>> phot = 90
     >>> thot = 40000
-    >>> state_pairs = list(({'pitch': phot}, {'pitch': p2}) for p2 in range(45, 181, 5))
-    >>> results1 = run_state_pairs(msid, aca_model_spec, model_init, limit, date, thot, state_pairs, state_pair_dtype, limit_type='max')
+    >>> state_pairs = [({'pitch': phot}, {'pitch': p2}) for p2 in range(45, 181, 5)]
+    >>> results1 = run_state_pairs(msid, aca_model_spec, model_init, limit, date, thot, state_pairs, limit_type='max')
 
 |
 
@@ -533,8 +486,8 @@ attitudes (not just at 90 degrees).
     >>> pcool = 170
     >>> tcool_ind = results1['pitch2'] == pcool
     >>> tcool = results1['t_dwell2'][tcool_ind].item()
-    >>> state_pairs = list(({'pitch': pcool}, {'pitch': p2}) for p2 in range(45, 181, 5))
-    >>> results2 = run_state_pairs(msid, aca_model_spec, model_init, limit, date, tcool, state_pairs, state_pair_dtype, limit_type='max')
+    >>> state_pairs = [({'pitch': pcool}, {'pitch': p2}) for p2 in range(45, 181, 5)]
+    >>> results2 = run_state_pairs(msid, aca_model_spec, model_init, limit, date, tcool, state_pairs, limit_type='max')
 
 .. figure:: images/dwell_time_yielded_by_20906s_at_170_pitch.png
 
@@ -550,9 +503,9 @@ cooling data would result in identical cooling data to those shown above in Step
     >>> hot_ind = (results2['t_dwell2'][results2['converged']] < 100000)
     >>> results3 = np.array([], dtype=results.dtype)
     >>> for result in results2[results2['converged']][hot_ind]:
-    >>>     state_pairs = list(({'pitch': result['pitch2']}, {'pitch': p2}) for p2 in range(45, 181, 5))
+    >>>     state_pairs = [({'pitch': result['pitch2']}, {'pitch': p2}) for p2 in range(45, 181, 5)]
     >>>     t = result['t_dwell2']
-    >>>     rnew = run_state_pairs(msid, aca_model_spec, model_init, limit, date, t, state_pairs, state_pair_dtype, limit_type='max')
+    >>>     rnew = run_state_pairs(msid, aca_model_spec, model_init, limit, date, t, state_pairs, limit_type='max')
     >>>     results3 = np.hstack((results3, rnew))
 
 |

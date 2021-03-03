@@ -186,8 +186,6 @@ class Balance1DPAMZT(Balance):
                  anchor_limited_pitch=170, anchor_offset_time=20000, margin_factor=0.95):
         self.msid = '1dpamzt'
         self.model_init = {'1dpamzt': limit, 'dpa0': limit, 'eclipse': False, 'dpa_power': 0.0}
-        # self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, 'fep_count': np.int8,
-        #                          'ccd_count': np.int8, 'clocking': np.bool, 'vid_board': np.bool, 'sim_z': np.int32}
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -200,8 +198,6 @@ class Balance1DEAMZT(Balance):
                  anchor_limited_pitch=170, anchor_offset_time=20000, margin_factor=0.95):
         self.msid = '1deamzt'
         self.model_init = {'1deamzt': limit, 'dea0': limit, 'eclipse': False, 'dpa_power': 0.0}
-        # self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, 'fep_count': np.int8,
-        #                          'ccd_count': np.int8, 'clocking': np.bool, 'vid_board': np.bool, 'sim_z': np.int32}
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -214,8 +210,6 @@ class Balance1PDEAAT(Balance):
                  anchor_limited_pitch=45, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = '1pdeaat'
         self.model_init = {'1pdeaat': limit, 'pin1at': limit, 'eclipse': False, 'dpa_power': 0.0}
-        # self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, 'fep_count': np.int8, 'ccd_count': np.int8,
-        #                          'clocking': np.bool, 'vid_board': np.bool, 'sim_z': np.int32, 'dh_heater': np.bool}
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -230,8 +224,6 @@ class BalanceFPTEMP_11(Balance):
         self.model_init = {'fptemp': limit, '1cbat': -55.0, 'sim_px': 110.0, 'eclipse': False, 'dpa_power': 0.0,
                            'orbitephem0_x': 25000e3, 'orbitephem0_y': 25000e3, 'orbitephem0_z': 25000e3,
                            'aoattqt1': 0.0, 'aoattqt2': 0.0, 'aoattqt3': 0.0, 'aoattqt4': 1.0, 'dh_heater': False}
-        # self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, 'fep_count': np.int8,
-        #                          'ccd_count': np.int8, 'clocking': np.bool, 'vid_board': np.bool, 'sim_z': np.int32}
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -244,7 +236,6 @@ class BalanceAACCCDPT(Balance):
                  anchor_limited_pitch=90, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = 'aacccdpt'
         self.model_init = {'aacccdpt': limit, 'aca0': limit, 'eclipse': False}
-        # self.state_pair_dtype = {'pitch': np.float64, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -257,7 +248,6 @@ class Balance4RT700T(Balance):
                  anchor_limited_pitch=90, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = '4rt700t'
         self.model_init = {'4rt700t': limit, 'oba0': limit, 'eclipse': False}
-        # self.state_pair_dtype = {'pitch': np.float64, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -270,7 +260,6 @@ class BalancePFTANK2T(Balance):
                  anchor_limited_pitch=50, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = 'pftank2t'
         self.model_init = {'pftank2t': limit, 'pf0tank2t': limit, 'eclipse': False, }
-        # self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -283,7 +272,6 @@ class BalancePM1THV2T(Balance):
                  anchor_limited_pitch=60, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = 'pm1thv2t'
         self.model_init = {'pm1thv2t': limit, 'mups0': limit, 'eclipse': False, }
-        # self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -296,7 +284,6 @@ class BalancePM2THV1T(Balance):
                  anchor_limited_pitch=60, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = 'pm2thv1t'
         self.model_init = {'pm2thv1t': limit, 'mups0': limit * 10, 'eclipse': False, }
-        # self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -309,7 +296,6 @@ class BalancePLINE04T(Balance):
                  anchor_limited_pitch=170, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = 'pline04t'
         self.model_init = {'pline04t': limit, 'pline04t0': limit, 'eclipse': False, }
-        # self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, }
         self.limit_type = 'min'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -322,7 +308,6 @@ class BalancePLINE03T(Balance):
                  anchor_limited_pitch=175, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = 'pline03t'
         self.model_init = {'pline03t': limit, 'pline03t0': limit, 'eclipse': False, }
-        # self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, }
         self.limit_type = 'min'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
