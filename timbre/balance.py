@@ -79,7 +79,8 @@ class Balance(object):
 
         # Find maximum hot time (including margin safety factor)
         dwell_results = find_second_dwell(self.date, dwell1_state, dwell2_state, time_offset_steady_state, self.msid,
-                                          limit, self.model_spec, self.model_init, limit_type=self.limit_type)
+                                          limit, self.model_spec, self.model_init, limit_type=self.limit_type,
+                                          n_dwells=50)
         return dwell_results['dwell_2_time'] * self.margin_factor
 
     def generate_balanced_pitch_dwells(self, datesecs, pitch_1, t_1, pitch_2, limit):
@@ -114,7 +115,7 @@ class Balance(object):
             return None
 
         args = (self.msid, self.model_spec, self.model_init, limit, datesecs, t_1, state_pairs)
-        kwargs = {'limit_type': self.limit_type, 'print_progress': False}
+        kwargs = {'limit_type': self.limit_type, 'print_progress': False, 'n_dwells': 30}
         results1 = run_state_pairs(*args, **kwargs)
 
         # Expand dwell capability curve yielded by pitch #2 at the associated time calculated above.
