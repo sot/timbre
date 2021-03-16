@@ -566,19 +566,11 @@ def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results
 
         # In rare conditions where all 'x' values are very close and 'wobble' a bit, it may not be sorted. If it
         # is not sorted, the quadratic method will result in an error. The linear method is more tolerant of this
-        # # condition.
-        try:
-            f_dwell_2_time = interpolate.interp1d(output[max_min], output['duration2'], kind='quadratic',
-                                                  assume_sorted=False)
-            f_non_limit_temp = interpolate.interp1d(output[max_min], output[min_max], kind='quadratic',
-                                                    assume_sorted=False)
-            f_mean_temp = interpolate.interp1d(output[max_min], output['mean'], kind='quadratic', assume_sorted=False)
-        except ValueError:
-            f_dwell_2_time = interpolate.interp1d(output[max_min], output['duration2'], kind='linear',
-                                                  assume_sorted=False)
-            f_non_limit_temp = interpolate.interp1d(output[max_min], output[min_max], kind='linear',
-                                                    assume_sorted=False)
-            f_mean_temp = interpolate.interp1d(output[max_min], output['mean'], kind='linear', assume_sorted=False)
+        # condition. Additionally, the quadratic has a tendency to produce some really weird results even when the
+        # data appears sensible.
+        f_dwell_2_time = interpolate.interp1d(output[max_min], output['duration2'], kind='linear', assume_sorted=False)
+        f_non_limit_temp = interpolate.interp1d(output[max_min], output[min_max], kind='linear', assume_sorted=False)
+        f_mean_temp = interpolate.interp1d(output[max_min], output['mean'], kind='linear', assume_sorted=False)
 
         results[max_min + '_temp'] = limit
         results['dwell_2_time'] = f_dwell_2_time(limit).item()

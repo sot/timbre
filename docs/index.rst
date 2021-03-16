@@ -491,7 +491,7 @@ attitudes (not just at 90 degrees).
 
 .. figure:: images/dwell_time_yielded_by_20906s_at_170_pitch.png
 
-At this point, the two charts above can be combined into the same plot to intuitiviely display balanced dwell
+At this point, the two charts above can be combined into the same plot to intuitively display balanced dwell
 information, however first it would be useful to include a sanity check to verify that these curves (red and blue) are
 indeed comparable and result in a balanced set of dwells. To perform this sanity check, each hot attitude and associated
 heating time shown in the plot above is used to recalculate the associated cooling time required to balance each hot
