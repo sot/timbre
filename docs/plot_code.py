@@ -51,7 +51,18 @@ legend_format_top_right= {
     'yanchor': "top",
     'y': 0.99,
     'xanchor': "right",
-    'x': 0.99
+    'x': 0.99,
+    'font': label_format,
+    'bgcolor': 'rgba(255, 255, 255, 0.5)'
+}
+
+legend_format_top_left= {
+    'yanchor': "top",
+    'y': 0.99,
+    'xanchor': "left",
+    'x': 0.01,
+    'font': label_format,
+    'bgcolor': 'rgba(255, 255, 255, 0.5)'
 }
 
 colors = px.colors.qualitative.D3
@@ -670,7 +681,11 @@ def generate_step_3_max_temp_plot_dict(output, title, t_dwell2, units='Celsius')
     return plot_object
 
 
-def generate_timbre_dwell_plot_data(results, filter_set):
+def generate_timbre_dwell_plot_data(results, filter_set, lines=True, label_override=''):
+    mode = 'lines+markers'
+    if lines is False:
+        mode = 'markers'
+
     plot_data = []
 
     for plot_set in filter_set:
@@ -691,13 +706,13 @@ def generate_timbre_dwell_plot_data(results, filter_set):
                 'type': 'scattergl',
                 'x': results['pitch2'][ind],
                 'y': results['t_dwell2'][ind],
-                'name': ' '.join(name),
-                'line': {'color':plot_color, 'width': 2},
+                'name': ' '.join(name) if len(label_override) == 0 else label_override,
+                'line': {'color': plot_color, 'width': 2},
                 'marker': {
                     'size': 10,
                     'color': plot_color,
                 },
-                'mode': 'lines+markers',
+                'mode': mode,
                 # 'showlegend': legend,
                 'xaxis': 'x',
                 'yaxis': 'y',
@@ -707,7 +722,8 @@ def generate_timbre_dwell_plot_data(results, filter_set):
     return plot_data
 
 
-def generate_timber_output_plot_dict(plot_data, title, legend=True):
+def generate_timber_output_plot_dict(plot_data, title, legend=True, legend_dict=None):
+
     plot_object = {
         'data': plot_data,
         'layout':
@@ -744,6 +760,11 @@ def generate_timber_output_plot_dict(plot_data, title, legend=True):
 
                 'xaxis':
                     {
+                        'title':
+                            {
+                                'text': f'Pitch (Degrees)',
+                                'font': label_format
+                            },
                         'domain': [0, 1],
                         'tickfont': axis_format,
                         #  'tickformatstops': time_axis_format,
@@ -759,6 +780,7 @@ def generate_timber_output_plot_dict(plot_data, title, legend=True):
                     },
 
                 'showlegend': legend,
+                'legend': legend_dict,
                 'template': 'simple_white',
             },
     }

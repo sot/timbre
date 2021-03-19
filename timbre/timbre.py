@@ -15,28 +15,17 @@ from scipy import interpolate
 from cxotime import CxoTime
 import xija
 
-
-pseudo_names = dict(
-    zip(['aacccdpt', 'pftank2t', '1dpamzt', '4rt700t', '1deamzt'], ['aca0', 'pf0tank2t', 'dpa0', 'oba0', 'dea0']))
-
-base_dtype = [('msid', string_dtype('utf-8', 20)),
-              ('date', string_dtype('utf-8', 8)),
-              ('datesecs', np.float64),
-              ('limit', np.float64),
-              ('t_dwell1', np.float64),
-              ('t_dwell2', np.float64),
-              ('min_temp', np.float64),
-              ('mean_temp', np.float64),
-              ('max_temp', np.float64),
-              ('min_pseudo', np.float64),
-              ('mean_pseudo', np.float64),
-              ('max_pseudo', np.float64),
-              ('converged', np.bool),
-              ('unconverged_hot', np.bool),
-              ('unconverged_cold', np.bool),
-              ('hotter_state', np.int8),
-              ('colder_state', np.int8)]
-
+non_state_names = {'aacccdpt': ['aca0', ],
+                   'pftank2t': ['pf0tank2t', ],
+                   '4rt700t': ['oba0', ],
+                   'pline03t': ['pline03t0', ],
+                   'pline04t': ['pline04t0', ],
+                   'pm1thv2t': ['mups0', ],
+                   'pm2thv1t': ['mups0', ],
+                   '1deamzt': ['dea0', ],
+                   '1dpamzt': ['dpa0', ],
+                   'fptemp_11': ['fptemp', '1cbat', 'sim_px'],
+                   '1pdeaat': ['pin1at', ]}
 
 def load_model_specs():
     """ Load Xija model parameters for all available models.
@@ -98,32 +87,6 @@ def load_model_specs():
     model_specs['fptemp_11'] = model_specs['fptemp']  # For backwards compatibility
 
     return model_specs
-
-
-def get_full_dtype(state_pair_dtype_dict):
-    """ Add Numpy data types for parameters specific to model to the boilerplate array data types.
-
-    :param state_pair_dtype_dict: Dictionary of Numpy data types
-    :type state_pair_dtype_dict: dict
-    :return: List of Numpy data types, including items specific to current model (e.g. pitch, roll, ccd_count, etc.)
-    :rtype: list
-
-    Example input::
-
-        state_pair_dtype_dict = {'pitch': np.float64, 'roll': np.float64}
-    """
-
-    full_results_dtype = copy(base_dtype)
-
-    # There are separate items for the first and second dwells, so for each item specific to the current model, add
-    # corresponding first and second dwell dtypes.
-    for param, state in state_pair_dtype_dict.items():
-        full_results_dtype.append((param + '1', state))
-
-    for param, state in state_pair_dtype_dict.items():
-        full_results_dtype.append((param + '2', state))
-
-    return full_results_dtype
 
 
 def get_local_model(filename):
@@ -260,7 +223,7 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
     results = {msid: tmsid}
 
     if pseudo is not None:
-        results[pseudo] = model.get_comp(pseudo_names[msid])
+        results[pseudo] = model.get_comp(pseudo)
 
     return results
 
@@ -414,6 +377,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     """
 
     datesecs = CxoTime(date).secs
+    msid = msid.lower()
 
     if 'max' in limit_type.lower():
         limit_type = 'max'
@@ -602,19 +566,11 @@ def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results
 
         # In rare conditions where all 'x' values are very close and 'wobble' a bit, it may not be sorted. If it
         # is not sorted, the quadratic method will result in an error. The linear method is more tolerant of this
-        # # condition.
-        try:
-            f_dwell_2_time = interpolate.interp1d(output[max_min], output['duration2'], kind='quadratic',
-                                                  assume_sorted=False)
-            f_non_limit_temp = interpolate.interp1d(output[max_min], output[min_max], kind='quadratic',
-                                                    assume_sorted=False)
-            f_mean_temp = interpolate.interp1d(output[max_min], output['mean'], kind='quadratic', assume_sorted=False)
-        except ValueError:
-            f_dwell_2_time = interpolate.interp1d(output[max_min], output['duration2'], kind='linear',
-                                                  assume_sorted=False)
-            f_non_limit_temp = interpolate.interp1d(output[max_min], output[min_max], kind='linear',
-                                                    assume_sorted=False)
-            f_mean_temp = interpolate.interp1d(output[max_min], output['mean'], kind='linear', assume_sorted=False)
+        # condition. Additionally, the quadratic has a tendency to produce some really weird results even when the
+        # data appears sensible.
+        f_dwell_2_time = interpolate.interp1d(output[max_min], output['duration2'], kind='linear', assume_sorted=False)
+        f_non_limit_temp = interpolate.interp1d(output[max_min], output[min_max], kind='linear', assume_sorted=False)
+        f_mean_temp = interpolate.interp1d(output[max_min], output['mean'], kind='linear', assume_sorted=False)
 
         results[max_min + '_temp'] = limit
         results['dwell_2_time'] = f_dwell_2_time(limit).item()
@@ -626,8 +582,8 @@ def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results
     return results, output
 
 
-def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state_pairs, state_pair_dtype,
-                    limit_type='max', max_dwell=None, n_dwells=10, print_progress=True, shared_data=None):
+def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state_pairs, limit_type='max',
+                    max_dwell=None, n_dwells=10, print_progress=True, shared_data=None):
     """ Determine dwell balance times for a set of cases.
 
     :param msid: Primary MSID for model being run
@@ -647,8 +603,6 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
     :param state_pairs: Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states,
         see state_pair section below for further details
     :type state_pairs: list or tuple
-    :param state_pair_dtype: Dictionary of name + Numpy data type pairs for the unique input parameters for each case
-    :type state_pair_dtype: dict
     :param limit_type: Type of limit, defaults to 'max' (a maximum temperature limit), other option is 'min'
     :type limit_type: str, optional
     :param max_dwell: Maximum duration for second dwell, can be tuned to provide better results
@@ -693,12 +647,41 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
             state_pair_dtype)
     """
 
-    results_dtype = get_full_dtype(state_pair_dtype)
+    non_state_names = {'aacccdpt': ['aca0', ],
+                       'pftank2t': ['pf0tank2t', ],
+                       '4rt700t': ['oba0', ],
+                       'pline03t': ['pline03t0', ],
+                       'pline04t': ['pline04t0', ],
+                       'pm1thv2t': ['mups0', ],
+                       'pm2thv1t': ['mups0', ],
+                       '1deamzt': ['dea0', ],
+                       '1dpamzt': ['dpa0', ],
+                       'fptemp': ['fptemp', '1cbat', 'sim_px'],
+                       '1pdeaat': ['pin1at', ]}
+
+    base_dtype = [('msid', string_dtype('utf-8', 20)),
+                  ('date', string_dtype('utf-8', 8)),
+                  ('datesecs', np.float64),
+                  ('limit', np.float64),
+                  ('t_dwell1', np.float64),
+                  ('t_dwell2', np.float64),
+                  ('min_temp', np.float64),
+                  ('mean_temp', np.float64),
+                  ('max_temp', np.float64),
+                  ('min_pseudo', np.float64),
+                  ('mean_pseudo', np.float64),
+                  ('max_pseudo', np.float64),
+                  ('converged', np.bool),
+                  ('unconverged_hot', np.bool),
+                  ('unconverged_cold', np.bool),
+                  ('hotter_state', np.int8),
+                  ('colder_state', np.int8)]
 
     duration = 30 * 24 * 3600.
     t_backoff = 2 * duration / 3
     datestr = CxoTime(date).date[:8]
     datesecs = CxoTime(date).secs
+    msid = msid.lower()
 
     results = []
 
@@ -733,15 +716,24 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                dwell_results['hotter_state'],
                dwell_results['colder_state']]
 
+        for key, value in init.items():
+            if key not in non_state_names[msid] and key not in dwell1_state and key not in msid:
+                dwell1_state[key] = value
+                dwell2_state[key] = value
+
+        state_dtype = []
         for key, value in dwell1_state.items():
             row.append(value)
+            state_dtype.append((key.lower() + '1', type(value)))
 
         for key, value in dwell2_state.items():
             row.append(value)
+            state_dtype.append((key.lower() + '2', type(value)))
 
         results.append(tuple(row))
 
-    results_array = np.array(results, dtype=results_dtype)
+    dtype = base_dtype + state_dtype
+    results_array = np.array(results, dtype=dtype)
 
     if shared_data is not None:
         shared_data.append(results_array)

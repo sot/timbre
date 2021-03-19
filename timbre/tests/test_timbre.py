@@ -34,13 +34,13 @@ def test_f_to_c():
     assert c == 100.0
 
 
-def test_get_full_dtype():
-    """ Test boilerplate dtype generation.
-    """
-
-    d = timbre.get_full_dtype({})
-
-    assert isinstance(np.dtype(d), np.dtype)
+# def test_get_full_dtype():
+#     """ Test boilerplate dtype generation.
+#     """
+#
+#     d = timbre.get_full_dtype({})
+#
+#     assert isinstance(np.dtype(d), np.dtype)
 
 
 def test_setup_model():
@@ -84,10 +84,9 @@ def test_run_state_pairs():
                    ({'pitch': 170}, {'pitch': 90}),
                    ({'pitch': 90}, {'pitch': 170}))
 
-    state_pair_dtype = {'pitch': np.float64}
+    # state_pair_dtype = {'pitch': np.float64}
 
-    results = timbre.run_state_pairs(msid, aca_model_spec, model_init[msid], limit, date, t_dwell1, state_pairs,
-                                     state_pair_dtype)
+    results = timbre.run_state_pairs(msid, aca_model_spec, model_init[msid], limit, date, t_dwell1, state_pairs)
 
     assert isinstance(results, np.ndarray)
 

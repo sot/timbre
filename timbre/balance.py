@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from cxotime import CxoTime
-from .timbre import run_state_pairs, find_second_dwell, load_model_specs, f_to_c
+from .timbre import run_state_pairs, find_second_dwell, load_model_specs
 
 
 class Balance(object):
@@ -18,12 +18,12 @@ class Balance(object):
         :param date: Date used for the dwell balance analysis
         :type date: str
         :param model_spec: Dictionary of model parameters for a single model
-        :type model_specs: dict
+        :type model_spec: dict
         :param limit: Thermal Limit
         :type limit: float
-        :param constant_condtions: Dictionary of initial conditions that remain constant for balance analysis, any
-            required prameters not included as constant_conditions must be included in the dwell state 1 and state 2
-            inputs
+        :param constant_conditions: Dictionary of conditions that remain constant for balance analysis, any required
+            parameters not included as constant_conditions must be included in the dwell state 1 and state 2 inputs.
+            This does not necessarily include initial conditions for primary and pseudo nodes.
         :type constant_conditions: dict
         :param pitch_step: pitch resolution, defaults to 1
         :type pitch_step: float or int
@@ -31,8 +31,8 @@ class Balance(object):
         :type anchor_offset_pitch: float or int
         :param anchor_limited_pitch: Pitch used to seed the limited time curve (usually the heating curve)
         :type anchor_limited_pitch: float or int
-        :param anchor_limited_time: Time used to seed the limited time curve (usually the heating curve)
-        :type anchor_limited_pitch: float
+        :param anchor_offset_time: Time used to seed the offset time curve (usually the cooling curve)
+        :type anchor_offset_time: float
         :param margin_factor: Knockdown/safety factor to reduce predicted available limited dwell time, intended to add
             some conservatism to the ACIS maximum dwell time predictions, which are used to determine the available
             cooling time for models that heat at forward and normal sun attitudes
@@ -72,12 +72,15 @@ class Balance(object):
         """
 
         # Define dwell states that are used to determine max cooling dwell time
+        #
+        # Note: self.constant_conditions does not include initial conditions for the primary and pseudo nodes.
         dwell1_state = {**{'pitch': p_offset}, **self.constant_conditions}
         dwell2_state = {**{'pitch': p_limited}, **self.constant_conditions}
 
         # Find maximum hot time (including margin safety factor)
         dwell_results = find_second_dwell(self.date, dwell1_state, dwell2_state, time_offset_steady_state, self.msid,
-                                          limit, self.model_spec, self.model_init, limit_type=self.limit_type)
+                                          limit, self.model_spec, self.model_init, limit_type=self.limit_type,
+                                          n_dwells=30)
         return dwell_results['dwell_2_time'] * self.margin_factor
 
     def generate_balanced_pitch_dwells(self, datesecs, pitch_1, t_1, pitch_2, limit):
@@ -106,13 +109,13 @@ class Balance(object):
                            for p2 in self.pitch_range)
 
         if np.isnan(t_1):
-            msg1 = f'Either {self.msid} is not limited at a pitch of {pitch_1} degrees, '
-            msg2 = 'or there was an error passing the associated dwell duration.'
-            print(msg1 + msg2)
+            msg1 = f'Either {self.msid} is not limited at a pitch of {pitch_1} degrees near {CxoTime(datesecs).date},' \
+                   f' or there was an error passing the associated dwell duration (received as: {str(t_1)}).'
+            print(msg1)
             return None
 
-        args = (self.msid, self.model_spec, self.model_init, limit, datesecs, t_1, state_pairs, self.state_pair_dtype)
-        kwargs = {'limit_type': self.limit_type, 'print_progress': False}
+        args = (self.msid, self.model_spec, self.model_init, limit, datesecs, t_1, state_pairs)
+        kwargs = {'limit_type': self.limit_type, 'print_progress': False, 'n_dwells': 30}
         results1 = run_state_pairs(*args, **kwargs)
 
         # Expand dwell capability curve yielded by pitch #2 at the associated time calculated above.
@@ -123,7 +126,7 @@ class Balance(object):
                             {**{'pitch': p2}, **self.constant_conditions})
                            for p2 in self.pitch_range)
 
-        args = (self.msid, self.model_spec, self.model_init, limit, datesecs, t_2, state_pairs, self.state_pair_dtype)
+        args = (self.msid, self.model_spec, self.model_init, limit, datesecs, t_2, state_pairs)
         results2 = run_state_pairs(*args, **kwargs)
 
         results = np.hstack((results1, results2))
@@ -184,8 +187,6 @@ class Balance1DPAMZT(Balance):
                  anchor_limited_pitch=170, anchor_offset_time=20000, margin_factor=0.95):
         self.msid = '1dpamzt'
         self.model_init = {'1dpamzt': limit, 'dpa0': limit, 'eclipse': False, 'dpa_power': 0.0}
-        self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, 'fep_count': np.int8,
-                                 'ccd_count': np.int8, 'clocking': np.bool, 'vid_board': np.bool, 'sim_z': np.int32}
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -198,8 +199,6 @@ class Balance1DEAMZT(Balance):
                  anchor_limited_pitch=170, anchor_offset_time=20000, margin_factor=0.95):
         self.msid = '1deamzt'
         self.model_init = {'1deamzt': limit, 'dea0': limit, 'eclipse': False, 'dpa_power': 0.0}
-        self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, 'fep_count': np.int8,
-                                 'ccd_count': np.int8, 'clocking': np.bool, 'vid_board': np.bool, 'sim_z': np.int32}
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -212,8 +211,6 @@ class Balance1PDEAAT(Balance):
                  anchor_limited_pitch=45, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = '1pdeaat'
         self.model_init = {'1pdeaat': limit, 'pin1at': limit, 'eclipse': False, 'dpa_power': 0.0}
-        self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, 'fep_count': np.int8, 'ccd_count': np.int8,
-                                 'clocking': np.bool, 'vid_board': np.bool, 'sim_z': np.int32, 'dh_heater': np.bool}
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -228,8 +225,6 @@ class BalanceFPTEMP_11(Balance):
         self.model_init = {'fptemp': limit, '1cbat': -55.0, 'sim_px': 110.0, 'eclipse': False, 'dpa_power': 0.0,
                            'orbitephem0_x': 25000e3, 'orbitephem0_y': 25000e3, 'orbitephem0_z': 25000e3,
                            'aoattqt1': 0.0, 'aoattqt2': 0.0, 'aoattqt3': 0.0, 'aoattqt4': 1.0, 'dh_heater': False}
-        self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, 'fep_count': np.int8,
-                                 'ccd_count': np.int8, 'clocking': np.bool, 'vid_board': np.bool, 'sim_z': np.int32}
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -242,7 +237,6 @@ class BalanceAACCCDPT(Balance):
                  anchor_limited_pitch=90, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = 'aacccdpt'
         self.model_init = {'aacccdpt': limit, 'aca0': limit, 'eclipse': False}
-        self.state_pair_dtype = {'pitch': np.float64, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -255,7 +249,6 @@ class Balance4RT700T(Balance):
                  anchor_limited_pitch=90, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = '4rt700t'
         self.model_init = {'4rt700t': limit, 'oba0': limit, 'eclipse': False}
-        self.state_pair_dtype = {'pitch': np.float64, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -268,7 +261,6 @@ class BalancePFTANK2T(Balance):
                  anchor_limited_pitch=50, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = 'pftank2t'
         self.model_init = {'pftank2t': limit, 'pf0tank2t': limit, 'eclipse': False, }
-        self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -281,7 +273,6 @@ class BalancePM1THV2T(Balance):
                  anchor_limited_pitch=60, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = 'pm1thv2t'
         self.model_init = {'pm1thv2t': limit, 'mups0': limit, 'eclipse': False, }
-        self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -294,7 +285,6 @@ class BalancePM2THV1T(Balance):
                  anchor_limited_pitch=60, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = 'pm2thv1t'
         self.model_init = {'pm2thv1t': limit, 'mups0': limit * 10, 'eclipse': False, }
-        self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -307,7 +297,6 @@ class BalancePLINE04T(Balance):
                  anchor_limited_pitch=170, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = 'pline04t'
         self.model_init = {'pline04t': limit, 'pline04t0': limit, 'eclipse': False, }
-        self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, }
         self.limit_type = 'min'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
@@ -320,7 +309,6 @@ class BalancePLINE03T(Balance):
                  anchor_limited_pitch=175, anchor_offset_time=20000, margin_factor=1.0):
         self.msid = 'pline03t'
         self.model_init = {'pline03t': limit, 'pline03t0': limit, 'eclipse': False, }
-        self.state_pair_dtype = {'pitch': np.float64, 'roll': np.float64, }
         self.limit_type = 'min'
 
         super().__init__(date, model_spec, limit, constant_conditions, pitch_step, anchor_offset_pitch,
