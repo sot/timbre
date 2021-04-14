@@ -1,10 +1,12 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-import warnings
 import copy
+
 import numpy as np
 import pandas as pd
+
 from cxotime import CxoTime
+
 from .timbre import run_state_pairs, find_second_dwell, load_model_specs
 
 
@@ -87,11 +89,6 @@ class Balance(object):
         self.anchor_limited_time = np.nan
         self.results = None
 
-        # self.anchor_limited_time = self.find_anchor_condition(self.anchor_offset_pitch,
-        #                                                       self.anchor_limited_pitch,
-        #                                                       self.anchor_offset_time,
-        #                                                       self.limit)
-
     def find_anchor_condition(self, p_offset, p_limited, anchor_offset_time, limit):
         """ Given a known offset duration, determine the maximum dwell time for the anchor limited pitch.
 
@@ -131,12 +128,8 @@ class Balance(object):
         :type t_1: float
         :param pitch_2: Anchor offset pitch
         :type pitch_2: float
-
-
-
-
-
-
+        :param t_2_orig: Originally calculated anchor offset dwell duration (seconds)
+        :type t_2_orig: float
         :param limit: Thermal limit
         :type limit: float
         :param pitch_range: Pitch values used to define dwell limits
@@ -154,8 +147,8 @@ class Balance(object):
                            for p2 in pitch_range)
 
         if np.isnan(t_1):
-            msg1 = f'Either {self.msid} is not limited at a pitch of {pitch_1} degrees near {CxoTime(datesecs).date},' \
-                   f' or there was an error passing the associated dwell duration (received as: {str(t_1)}).'
+            msg1 = f'{self.msid} is not limited at a pitch of {pitch_1} degrees near {CxoTime(datesecs).date},' \
+                   f' with the following constant conditions:\n{self.constant_conditions}.\n'
             print(msg1)
             return None
 
@@ -364,6 +357,9 @@ class Composite(object):
         tail_pitches = self.get_required_pitch_values()
         self.tail_pitches = tail_pitches[tail_pitches > 130]
 
+        if not set(self.pitch_range).issubset(set(range(45, 181, pitch_step))):
+            raise ValueError(f'Pitch step must be defined to include all anchor pitch values: {self.pitch_range}')
+
         self.msids = list(self.anchors.keys())
         self.limited_results = pd.DataFrame(index=range(45, 181, pitch_step), columns=self.msids)
         self.offset_results = pd.DataFrame(index=range(45, 181, pitch_step), columns=self.msids)
@@ -387,7 +383,11 @@ class Composite(object):
         self.pline03t = BalancePLINE03T(self.date, self.model_specs['pline03t'], self.limits['pline03t'], sc_const)
         self.pline04t = BalancePLINE04T(self.date, self.model_specs['pline04t'], self.limits['pline04t'], sc_const)
 
+        dashes = ''.join(["-", ] * 120)
+        print(f'{dashes}\nMap Dwell Capability\n{dashes}')
         self.map_composite()
+
+        print(f'{dashes}\nFill In Dwell Capability\n{dashes}\n')
         self.fill_composite()
 
     def get_required_pitch_values(self):
@@ -424,7 +424,8 @@ class Composite(object):
 
     def map_composite(self):
 
-        print(f'Dwell Limits: {self.dwell_limits.loc[self.pitch_range]}')
+        dashes = ''.join(["-", ] * 40)
+        print(f'\n{dashes}\nStart of Iteration:\n')
 
         self.balance_model('1dpamzt', self.dpa)
         self.balance_model('1deamzt', self.dea)
@@ -442,6 +443,10 @@ class Composite(object):
         self.balance_model('pline03t', self.pline03t)
         self.balance_model('pline04t', self.pline04t)
 
+        s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].iteritems()])
+        print(f'Approximate dwell limits calculated by this iteration: \n  Pitch    Duration\n{s}')
+
+
         final_dwell_limits = copy.copy(self.dwell_limits.loc[self.pitch_range])
 
         rerun = False
@@ -450,15 +455,18 @@ class Composite(object):
             initial_tail_duration = tail_sun_dwell_limits.loc[p]
 
             if final_duration < initial_tail_duration:
-                self.dwell_limits.loc[p] = final_duration * 0.95  # Avoid a potentially infinite loop
+                self.dwell_limits.loc[p] = final_duration * 0.99  # Avoid a potentially infinite loop
                 rerun = True
 
         if rerun is True:
+            print(f'Tail sun time available for cooling is less than originally assumed at the start of this' 
+                  ' iteration, start new iteration.')
             self.map_composite()
 
     def fill_composite(self):
 
         self.pitch_range = np.array(self.dwell_limits.index)
+
         self.balance_model('1dpamzt', self.dpa)
         self.balance_model('1deamzt', self.dea)
         self.balance_model('fptemp_11', self.acisfp)
@@ -470,3 +478,7 @@ class Composite(object):
         self.balance_model('pftank2t', self.tank)
         self.balance_model('pline03t', self.pline03t)
         self.balance_model('pline04t', self.pline04t)
+
+        dashes = ''.join(["-", ] * 120)
+        s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].iteritems()])
+        print(f'{dashes}\nFinal Dwell Limits: \n  Pitch    Duration\n{s}\n')
