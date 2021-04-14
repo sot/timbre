@@ -93,26 +93,30 @@ def test_run_state_pairs():
 
 def test_generate_balanced_pitch_dwells():
 
-    msid = 'aacccdpt'
+    # msid = 'aacccdpt'
     date = '2021:001:00:00:00'
     limit = -7.1
     aca_constant_conditions = {}
+    anchor_offset_pitch = 160
+    anchor_limited_pitch = 90
+    anchor_offset_time = 20000
+    pitch_range = np.arange(45, 181, 5)
 
     aca = timbre.BalanceAACCCDPT(date,
                                  aca_model_spec,
                                  limit,
-                                 aca_constant_conditions,
-                                 anchor_offset_pitch=160,
-                                 anchor_limited_pitch=90,
-                                 anchor_offset_time=20000)
+                                 aca_constant_conditions)
 
+    aca.find_anchor_condition(anchor_offset_pitch, anchor_limited_pitch, anchor_offset_time, limit)
     aca.results = aca.generate_balanced_pitch_dwells(aca.datesecs,
-                                                     aca.anchor_limited_pitch,
+                                                     anchor_limited_pitch,
                                                      aca.anchor_limited_time,
-                                                     aca.anchor_offset_pitch,
-                                                     aca.limit)
+                                                     anchor_offset_pitch,
+                                                     anchor_offset_time,
+                                                     aca.limit,
+                                                     pitch_range)
 
-    median_limited_dwell = np.median(aca.get_limited_results(aca.results)['t_dwell2'])
+    median_limited_dwell = np.median(timbre.get_limited_results(aca.results, anchor_offset_pitch)['t_dwell2'])
 
     assert median_limited_dwell > 20000
     assert median_limited_dwell < 50000

@@ -786,3 +786,249 @@ def generate_timber_output_plot_dict(plot_data, title, legend=True, legend_dict=
     }
     return plot_object
 
+
+def generate_non_dimenstional_temperature_plot(plot_data, x_label, y_label, title, x_range, y_range=None, shapes=None,
+                                               annotations=None):
+    plot_object = {
+        'data': plot_data,
+        'layout':
+            {
+                'width': 1200,
+                'height': 600,
+                'margin': {'l': 80, 'r': 50, 't': 50, 'b': 70},
+                'title':
+                {
+                    'text': title,
+                    'font': title_format,
+                    'y': 0.98,
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'yanchor': 'top'
+                },
+                'yaxis': {
+                    'title': {
+                        'text': y_label,
+                        'font': label_format
+                    },
+                    'tickfont': axis_format,
+                    'zeroline': False,
+                    'linecolor': '#666666',
+                    'linewidth': 1,
+                    'mirror': True,
+                    'anchor': 'x',
+                    'showgrid': True,
+                    'range': y_range
+                },
+                'xaxis': {
+                    'title': {
+                        'text': x_label,
+                        'font': label_format
+                    },
+                    'domain': [0, 1],
+                    'tickfont': axis_format,
+                    'zeroline': False,
+                    'linecolor': '#666666',
+                    'linewidth': 1,
+                    'mirror': True,
+                    'showticklabels': True,
+                    'anchor': 'y',
+                    'showgrid': True,
+                    'range': x_range
+                },
+                'template': 'simple_white',
+                'shapes': shapes,
+                'annotations': annotations,
+            },
+    }
+    return plot_object
+
+def generate_non_dimensional_shape_data(t_h, T_h, t_c, T_c):
+    shape_data = [
+        {
+            'fillcolor': 'black',
+            'line': {'width': 0},
+            'opacity': 0.1,
+            'type': 'rect',
+            'x0': 0,
+            'x1': 2,
+            'y0': 0.6,
+            'y1': 1,
+            'xref': 'x',
+            'yref': 'y',
+        },
+        {
+            'line': {'color': 'black', 'dash': 'dash', 'width': 3},
+            'opacity': 0.65,
+            'type': 'line',
+            'x0': np.interp(0.6, T_h, t_h),
+            'x1': np.interp(0.6, T_h, t_h),
+            'y0': -1,
+            'y1': 0.6,
+            'xref': 'x',
+            'yref': 'y',
+        },
+        {
+            'line': {'color': 'black', 'dash': 'dash', 'width': 3},
+            'opacity': 0.65,
+            'type': 'line',
+            'x0': np.interp(0.6, T_c[::-1], t_c[::-1]) + t_h[-1],
+            'x1': np.interp(0.6, T_c[::-1], t_c[::-1]) + t_h[-1],
+            'y0': -1,
+            'y1': 0.6,
+            'xref': 'x',
+            'yref': 'y',
+        },
+        {
+            'line': {'color': 'black', 'dash': 'dash', 'width': 3},
+            'opacity': 0.65,
+            'type': 'line',
+            'x0': 1,
+            'x1': 1,
+            'y0': -1,
+            'y1': 1,
+            'xref': 'x',
+            'yref': 'y',
+        }
+    ]
+    return shape_data
+
+
+def generate_non_dimensional_annotation_data(t_h, T_h, t_c, T_c):
+
+    annotation_data = [
+        {
+            'x': 1.5,
+            'y': 0.8,
+            'text': 'Example shortened dwell<br>temperature range used to<br>evaluate offset effectiveness',
+            'showarrow': False,
+            'xref': "x",
+            'yref': "y",
+            'xanchor': "center",
+            'yanchor': "middle",
+            'font': label_format,
+            'align': 'left'
+        },
+
+        {
+            'x': 1,
+            'y': 0.4,
+            'text': '',
+            'showarrow': True,
+            'arrowhead': 3,
+            'arrowwidth': 2,
+            'arrowcolor': 'rgb(100,100,100)',
+            'xref': "x",
+            'yref': "y",
+            'ax': 0.5,
+            'ay': 0.4,
+            'axref': 'x',
+            'ayref': 'y',
+            'xanchor': "center",
+            'yanchor': "bottom",
+            'font': label_format
+        },
+        {
+            'x': np.interp(0.6, T_h, t_h),
+            'y': 0.4,
+            'text': '',
+            'showarrow': True,
+            'arrowhead': 3,
+            'arrowwidth': 2,
+            'arrowcolor': 'rgb(100,100,100)',
+            'xref': "x",
+            'yref': "y",
+            'ax': 0.5,
+            'ay': 0.4,
+            'axref': 'x',
+            'ayref': 'y',
+            'xanchor': "center",
+            'yanchor': "bottom",
+            'font': label_format
+        },
+        {
+            'x': 0.6,
+            'y': 0.32,
+            'text': 'Shortened heating duration',
+            'showarrow': False,
+            'xref': "x",
+            'yref': "y",
+            'xanchor': "center",
+            'yanchor': "bottom",
+            'font': label_format
+        },
+
+        {
+            'x': np.interp(0.6, T_c[::-1], t_c[::-1]) + t_h[-1],
+            'y': 0.4,
+            'text': '',
+            'showarrow': True,
+            'arrowhead': 3,
+            'arrowwidth': 2,
+            'arrowcolor': 'rgb(100,100,100)',
+            'xref': "x",
+            'yref': "y",
+            'ax': 1.01,
+            'ay': 0.4,
+            'axref': 'x',
+            'ayref': 'y',
+            'xanchor': "center",
+            'yanchor': "bottom",
+            'font': label_format
+        },
+        {
+            'x': 1.0,
+            'y': 0.4,
+            'text': '',
+            'showarrow': True,
+            'arrowhead': 3,
+            'arrowwidth': 2,
+            'arrowcolor': 'rgb(100,100,100)',
+            'xref': "x",
+            'yref': "y",
+            'ax': 1.01,
+            'ay': 0.4,
+            'axref': 'x',
+            'ayref': 'y',
+            'xanchor': "center",
+            'yanchor': "bottom",
+            'font': label_format
+        },
+
+        {
+            'x': np.interp(0.6, T_c[::-1], t_c[::-1]) + t_h[-1],
+            'y': 0.4,
+            'text': 'Shortened cooling duration',
+            'showarrow': True,
+            'arrowhead': 0,
+            'arrowwidth': 2,
+            'arrowcolor': 'rgb(100,100,100)',
+            'xref': "x",
+            'yref': "y",
+            'ax': 1.5,
+            'ay': 0.5,
+            'axref': 'x',
+            'ayref': 'y',
+            'xanchor': "center",
+            'yanchor': "bottom",
+            'font': label_format
+        },
+    ]
+
+    return annotation_data
+
+def generate_non_dimensional_plot_data(t_h, T_h, t_c, T_c):
+    plot_data = [
+        {
+            'x': t_h,
+            'y': T_h,
+            'line': {'color': colors[3]},
+            'name': 'Heating'
+        },
+        {
+            'x': t_c + t_h[-1],
+            'y': T_c,
+            'line': {'color': colors[0]},
+            'name': 'Cooling'
+        },
+    ]
+    return plot_data
