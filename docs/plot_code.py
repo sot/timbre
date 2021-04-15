@@ -787,6 +787,139 @@ def generate_timber_output_plot_dict(plot_data, title, legend=True, legend_dict=
     return plot_object
 
 
+def generate_random_balanced_dwell_plot_dict(model, title, units='Celsius'):
+
+    plot_object = {
+        'data': [
+            {
+                'type': 'scattergl',
+                'x': format_dates(model.times),
+                'y': model.mvals,
+                'name': 'Schedule Temperatures',
+                'line': {'color': 'black', 'width': 2, 'shape': 'hv'},
+                'mode': 'lines',
+                'showlegend': False,
+                'xaxis': 'x2',
+                'yaxis': 'y2',
+            },
+            {
+                'type': 'scattergl',
+                'x': format_dates(model.times),
+                'y': model.model.get_comp('pitch').dvals,
+                'name': 'Pitch',
+                'line': {'color': 'black', 'width': 2, 'shape': 'hv'},
+                'mode': 'lines',
+                'showlegend': False,
+                'xaxis': 'x',
+                'yaxis': 'y',
+            }
+        ],
+        'layout':
+            {
+                'hovermode': "closest",
+                'autosize': False,
+                'width': 1200,
+                'height': 600,
+                'margin': {'l': 80, 'r': 50, 't': 50, 'b': 70},
+                'title':
+                    {
+                        'text': title,
+                        'font': title_format,
+                        'y': 0.98,
+                        'x': 0.5,
+                        'xanchor': 'center',
+                        'yanchor': 'top'
+                    },
+                'yaxis':
+                    {
+                        'title':
+                            {
+                                'text': 'Pitch',
+                                'font': label_format
+                            },
+                        'tickfont': axis_format,
+                        'zeroline': False,
+                        'linecolor': '#666666',
+                        'linewidth': 1,
+                        'mirror': True,
+                        'anchor': 'x',
+                        'domain': [0, 0.38],
+                    },
+                'yaxis2':
+                    {
+                        'title':
+                            {
+                                'text': f'Temperature ({units})',
+                                'font': label_format
+                            },
+                        'tickfont': axis_format,
+                        'zeroline': False,
+                        'linecolor': '#666666',
+                        'linewidth': 1,
+                        'mirror': True,
+                        'anchor': 'x2',
+                        'domain': [0.4, 1.0],
+                    },
+
+                'xaxis':
+                    {
+                        'domain': [0, 1],
+                        'tickfont': axis_format,
+                        'zeroline': False,
+                        'linecolor': '#666666',
+                        'linewidth': 1,
+                        'mirror': True,
+                        'showticklabels': True,
+                        'anchor': 'y',
+                    },
+
+                'xaxis2':
+                    {
+                        'domain': [0, 1],
+                        'tickfont': axis_format,
+                        'zeroline': False,
+                        'linecolor': '#666666',
+                        'linewidth': 1,
+                        'mirror': True,
+                        'showticklabels': False,
+                        'anchor': 'y2',
+                        'matches': 'x',
+                        'ticks': ''
+                    },
+
+                'showlegend': True,
+                'template': 'simple_white',
+                'shapes': [
+                    {
+                        'line': {'color': 'black', 'dash': 'dash', 'width': 3},
+                        'opacity': 0.65,
+                        'type': 'line',
+                        'x0': 0,
+                        'x1': 1,
+                        'y0': -6.5,
+                        'y1': -6.5,
+                        'xref': 'x2 domain',
+                        'yref': 'y2',
+                    },
+                ],
+                'annotations': [
+                    {
+                        'x': 0.1,
+                        'y': -6.485,
+                        'text': 'Limit = -6.5C',
+                        'showarrow': False,
+                        'xref': "paper",
+                        'yref': "y2",
+                        'xanchor': "center",
+                        'yanchor': "bottom",
+                        'font': label_format
+                    },
+                ],
+            },
+    }
+    return plot_object
+
+
 def generate_non_dimenstional_temperature_plot(plot_data, x_label, y_label, title, x_range, y_range=None, shapes=None,
                                                annotations=None):
     plot_object = {
@@ -841,6 +974,7 @@ def generate_non_dimenstional_temperature_plot(plot_data, x_label, y_label, titl
             },
     }
     return plot_object
+
 
 def generate_non_dimensional_shape_data(t_h, T_h, t_c, T_c):
     shape_data = [
