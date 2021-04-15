@@ -356,6 +356,7 @@ class Composite(object):
         self.pitch_range = self.get_required_pitch_values()
         tail_pitches = self.get_required_pitch_values()
         self.tail_pitches = tail_pitches[tail_pitches > 130]
+        self.non_tail_pitches = tail_pitches[tail_pitches <= 130]
 
         if not set(self.pitch_range).issubset(set(range(45, 181, pitch_step))):
             raise ValueError(f'Pitch step must be defined to include all anchor pitch values: {self.pitch_range}')
@@ -427,6 +428,9 @@ class Composite(object):
         dashes = ''.join(["-", ] * 40)
         print(f'\n{dashes}\nStart of Iteration:\n')
 
+        # Note the initial time used for cooling ACIS models sensitive to tail sun heating
+        initial_dwell_limits = copy.copy(self.dwell_limits.loc[self.pitch_range])
+
         self.balance_model('1dpamzt', self.dpa)
         self.balance_model('1deamzt', self.dea)
         self.balance_model('fptemp_11', self.acisfp)
@@ -446,21 +450,33 @@ class Composite(object):
         s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].iteritems()])
         print(f'Approximate dwell limits calculated by this iteration: \n  Pitch    Duration\n{s}')
 
-
         final_dwell_limits = copy.copy(self.dwell_limits.loc[self.pitch_range])
-
-        rerun = False
+        rerun_tail = False
+        # Check to see if the pline dwell balances reduced tail sun cooling time for normal and fwd sun heating models.
         for p in self.tail_pitches:
-            final_duration = final_dwell_limits.loc[p]
+            final_tail_duration = final_dwell_limits.loc[p]
             initial_tail_duration = tail_sun_dwell_limits.loc[p]
 
-            if final_duration < initial_tail_duration:
-                self.dwell_limits.loc[p] = final_duration * 0.99  # Avoid a potentially infinite loop
-                rerun = True
+            if final_tail_duration < initial_tail_duration:
+                # self.dwell_limits.loc[p] = final_tail_duration * 0.99  # Avoid a potentially infinite loop
+                rerun_tail = True
 
-        if rerun is True:
-            print(f'Tail sun time available for cooling is less than originally assumed at the start of this' 
-                  ' iteration, start new iteration.')
+        rerun_fwd = False
+        # Check to see if the initial assumed dwell time for ACIS models exceeds final available dwell time.
+        for p in self.non_tail_pitches:
+            final_non_tail_duration = final_dwell_limits[p]
+            initial_non_tail_duration = initial_dwell_limits.loc[p]
+
+            if final_non_tail_duration < initial_non_tail_duration:
+                rerun_fwd = True
+
+        if rerun_tail is True or rerun_fwd is True:
+            if rerun_tail is True:
+                print(f'Tail sun time available for cooling is less than originally assumed at the start of this' 
+                      ' iteration, start new iteration.')
+            if rerun_fwd is True:
+                print(f'Forward sun time available for cooling is less than originally assumed at the start of this' 
+                      ' iteration, start new iteration.')
             self.map_composite()
 
     def fill_composite(self):
