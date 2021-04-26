@@ -65,7 +65,7 @@ def test_find_second_dwell():
     results = timbre.find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, aca_model_spec,
                                        model_init[msid], limit_type='max')
     assert isinstance(results, dict)
-    assert np.isclose(results['dwell_2_time'], 65723.0, atol=1.0e3)
+    assert np.isclose(results['dwell_2_time'], 58648.0, atol=1.0e3)
 
 
 def test_run_state_pairs():
@@ -83,8 +83,6 @@ def test_run_state_pairs():
                    ({'pitch': 75}, {'pitch': 130}),
                    ({'pitch': 170}, {'pitch': 90}),
                    ({'pitch': 90}, {'pitch': 170}))
-
-    # state_pair_dtype = {'pitch': np.float64}
 
     results = timbre.run_state_pairs(msid, aca_model_spec, model_init[msid], limit, date, t_dwell1, state_pairs)
 
