@@ -45,7 +45,7 @@ Notebook-Produced Documentation
 
    building_blocks
    model_characterization
-   application_of_timbre_estimates_for_shorter_durations
+   shorter_durations
    api_documentation
 
 Indices and tables
