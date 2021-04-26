@@ -28,13 +28,17 @@ author = 'Matthew Dahmer'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'nbsphinx',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.githubpages',
+    'IPython.sphinxext.ipython_console_highlighting'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = ['.rst', '.ipynb']
 
 # The master toctree document.
 master_doc = 'index'

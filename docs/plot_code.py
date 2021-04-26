@@ -1,10 +1,13 @@
 
 import numpy as np
 import plotly.express as px
+import pandas as pd
 from datetime import datetime
 
 from cxotime import CxoTime
 
+height = 400
+width = 600
 
 time_axis_format = [
     #         dict(dtickrange=[None, 600000], value="%H:%M:%S.%L\n"),
@@ -20,34 +23,34 @@ font = 'Arial'
 
 title_format = {
     'family': font,
-    'size': 32,
+    'size': 20,
     'color': '#666666',
     #     'color': '#7f7f7f'
 }
 sub_title_format = {
     'family': font,
-    'size': 24,
+    'size': 16,
     'color': '#666666'
 }
 axis_format = {
     'family': font,
-    'size': 20,
+    'size': 14,
     'color': '#666666'
 }
 
 label_format = {
     'family': font,
-    'size': 24,
+    'size': 14,
     'color': '#666666'
 }
 
 legend_format = {
     'family': font,
-    'size': 16,
+    'size': 12,
     'color': "#666666",
 }
 
-legend_format_top_right= {
+legend_format_top_right = {
     'yanchor': "top",
     'y': 0.99,
     'xanchor': "right",
@@ -56,7 +59,7 @@ legend_format_top_right= {
     'bgcolor': 'rgba(255, 255, 255, 0.5)'
 }
 
-legend_format_top_left= {
+legend_format_top_left = {
     'yanchor': "top",
     'y': 0.99,
     'xanchor': "left",
@@ -140,14 +143,14 @@ def generate_converged_solution_plot_dict(plot_data, shapes, annotations, tstart
             {
                 'hovermode': "closest",
                 'autosize': False,
-                'width': 1200,
-                'height': 600,
-                'margin': {'l': 80, 'r': 50, 't': 50, 'b': 70},
+                'width': width,
+                'height': height,
+                'margin': {'l': 50, 'r': 50, 't': 50, 'b': 70},
                 'title':
                     {
                         'text': 'Converged Timbre Dwell Simulation',
                         'font': title_format,
-                        'y': 0.98,
+                        'y': 0.95,
                         'x': 0.5,
                         'xanchor': 'center',
                         'yanchor': 'top'
@@ -404,21 +407,21 @@ def generate_example_balance_plot_dict(t_dwell1, t_dwell2, dwell1_state, dwell2_
             'text': [f'Dwell #1 State<br>Pitch: {dwell1_state["pitch"]}<br><br>Dwell Time: {np.round(t_dwell1, 0):.0f}s<br>(Input)',
                      f'Dwell #2 State<br>Pitch: {dwell2_state["pitch"]}<br><br>Dwell Time: {np.round(t_dwell2, 0):.0f}s<br>(Calculated)'],
             'textposition': 'inside',
-            'textfont': {'family': font, 'size': 24, 'color': 'white'},
+            'textfont': {'family': font, 'size': 16, 'color': 'white'},
             'marker': {'color': [colors[3], colors[0]]}
         },
         'layout':
             {
                 'hovermode': "closest",
                 'autosize': False,
-                'width': 1200,
-                'height': 600,
-                'margin': {'l': 80, 'r': 50, 't': 50, 'b': 70},
+                'width': width,
+                'height': height,
+                'margin': {'l': 50, 'r': 50, 't': 50, 'b': 70},
                 'title':
                     {
                         'text': 'Timbre Produced Dwell Balance',
                         'font': title_format,
-                        'y': 0.98,
+                        'y': 0.95,
                         'x': 0.5,
                         'xanchor': 'center',
                         'yanchor': 'top'
@@ -461,14 +464,14 @@ def generate_step_2_plot_dict(plot_data, tstart, tstop, title, units='Celsius'):
             {
                 'hovermode': "closest",
                 'autosize': False,
-                'width': 1200,
-                'height': 600,
-                'margin': {'l': 80, 'r': 50, 't': 50, 'b': 70},
+                'width': width,
+                'height': height,
+                'margin': {'l': 50, 'r': 50, 't': 50, 'b': 70},
                 'title':
                     {
                         'text': title,
                         'font': title_format,
-                        'y': 0.98,
+                        'y': 0.95,
                         'x': 0.5,
                         'xanchor': 'center',
                         'yanchor': 'top'
@@ -565,7 +568,7 @@ def generate_step_3_max_temp_plot_dict(output, title, t_dwell2, units='Celsius')
                 'name': f'Dwell 2 Duration Guesses',
                 'line': {'color': 'black', 'width': 2, 'shape': 'hv'},
                 'marker': {
-                    'size': 24,
+                    'size': 16,
                     'cmax': max(output['duration2']),
                     'cmin': min(output['duration2']),
                     'color': output['duration2'],
@@ -581,14 +584,14 @@ def generate_step_3_max_temp_plot_dict(output, title, t_dwell2, units='Celsius')
             {
                 'hovermode': "closest",
                 'autosize': False,
-                'width': 1200,
-                'height': 600,
-                'margin': {'l': 80, 'r': 50, 't': 50, 'b': 70},
+                'width': width,
+                'height': height,
+                'margin': {'l': 50, 'r': 50, 't': 50, 'b': 70},
                 'title':
                     {
                         'text': title,
                         'font': title_format,
-                        'y': 0.98,
+                        'y': 0.95,
                         'x': 0.5,
                         'xanchor': 'center',
                         'yanchor': 'top'
@@ -730,14 +733,14 @@ def generate_timber_output_plot_dict(plot_data, title, legend=True, legend_dict=
             {
                 'hovermode': "closest",
                 'autosize': False,
-                'width': 1200,
-                'height': 600,
-                'margin': {'l': 80, 'r': 50, 't': 50, 'b': 70},
+                'width': width,
+                'height': height,
+                'margin': {'l': 50, 'r': 50, 't': 50, 'b': 70},
                 'title':
                     {
                         'text': title,
                         'font': title_format,
-                        'y': 0.98,
+                        'y': 0.95,
                         'x': 0.5,
                         'xanchor': 'center',
                         'yanchor': 'top'
@@ -818,14 +821,14 @@ def generate_random_balanced_dwell_plot_dict(model, title, units='Celsius'):
             {
                 'hovermode': "closest",
                 'autosize': False,
-                'width': 1200,
-                'height': 600,
-                'margin': {'l': 80, 'r': 50, 't': 50, 'b': 70},
+                'width': width,
+                'height': height,
+                'margin': {'l': 50, 'r': 50, 't': 50, 'b': 70},
                 'title':
                     {
                         'text': title,
                         'font': title_format,
-                        'y': 0.98,
+                        'y': 0.95,
                         'x': 0.5,
                         'xanchor': 'center',
                         'yanchor': 'top'
@@ -926,14 +929,14 @@ def generate_non_dimenstional_temperature_plot(plot_data, x_label, y_label, titl
         'data': plot_data,
         'layout':
             {
-                'width': 1200,
-                'height': 600,
-                'margin': {'l': 80, 'r': 50, 't': 50, 'b': 70},
+                'width': width,
+                'height': height,
+                'margin': {'l': 50, 'r': 50, 't': 50, 'b': 50},
                 'title':
                 {
                     'text': title,
                     'font': title_format,
-                    'y': 0.98,
+                    'y': 0.95,
                     'x': 0.5,
                     'xanchor': 'center',
                     'yanchor': 'top'
@@ -968,6 +971,20 @@ def generate_non_dimenstional_temperature_plot(plot_data, x_label, y_label, titl
                     'showgrid': True,
                     'range': x_range
                 },
+                'legend':
+                    {
+                        'font': {
+                            'family': font,
+                            'size': 10,
+                            'color': "#666666",
+                        },
+                        'xanchor': 'left',
+                        'yanchor': 'top',
+                        'x': 0.01,
+                        'y': 0.99,
+                        'bordercolor': "#cccccc",
+                        'borderwidth': 1,
+                    },
                 'template': 'simple_white',
                 'shapes': shapes,
                 'annotations': annotations,
@@ -1048,7 +1065,8 @@ def generate_non_dimensional_annotation_data(t_h, T_h, t_c, T_c):
             'y': 0.4,
             'text': '',
             'showarrow': True,
-            'arrowhead': 3,
+            'arrowhead': 2,
+            'arrowsize': 0.75,
             'arrowwidth': 2,
             'arrowcolor': 'rgb(100,100,100)',
             'xref': "x",
@@ -1066,7 +1084,8 @@ def generate_non_dimensional_annotation_data(t_h, T_h, t_c, T_c):
             'y': 0.4,
             'text': '',
             'showarrow': True,
-            'arrowhead': 3,
+            'arrowhead': 2,
+            'arrowsize': 0.75,
             'arrowwidth': 2,
             'arrowcolor': 'rgb(100,100,100)',
             'xref': "x",
@@ -1080,7 +1099,7 @@ def generate_non_dimensional_annotation_data(t_h, T_h, t_c, T_c):
             'font': label_format
         },
         {
-            'x': 0.6,
+            'x': 0.57,
             'y': 0.32,
             'text': 'Shortened heating duration',
             'showarrow': False,
@@ -1096,8 +1115,9 @@ def generate_non_dimensional_annotation_data(t_h, T_h, t_c, T_c):
             'y': 0.4,
             'text': '',
             'showarrow': True,
-            'arrowhead': 3,
+            'arrowhead': 2,
             'arrowwidth': 2,
+            'arrowsize': 0.75,
             'arrowcolor': 'rgb(100,100,100)',
             'xref': "x",
             'yref': "y",
@@ -1114,8 +1134,9 @@ def generate_non_dimensional_annotation_data(t_h, T_h, t_c, T_c):
             'y': 0.4,
             'text': '',
             'showarrow': True,
-            'arrowhead': 3,
+            'arrowhead': 2,
             'arrowwidth': 2,
+            'arrowsize': 0.75,
             'arrowcolor': 'rgb(100,100,100)',
             'xref': "x",
             'yref': "y",
@@ -1135,10 +1156,11 @@ def generate_non_dimensional_annotation_data(t_h, T_h, t_c, T_c):
             'showarrow': True,
             'arrowhead': 0,
             'arrowwidth': 2,
+            'arrowsize': 1,
             'arrowcolor': 'rgb(100,100,100)',
             'xref': "x",
             'yref': "y",
-            'ax': 1.5,
+            'ax': 1.55,
             'ay': 0.5,
             'axref': 'x',
             'ayref': 'y',
@@ -1149,6 +1171,7 @@ def generate_non_dimensional_annotation_data(t_h, T_h, t_c, T_c):
     ]
 
     return annotation_data
+
 
 def generate_non_dimensional_plot_data(t_h, T_h, t_c, T_c):
     plot_data = [
@@ -1166,3 +1189,226 @@ def generate_non_dimensional_plot_data(t_h, T_h, t_c, T_c):
         },
     ]
     return plot_data
+
+
+msid_colors = {
+        'fptemp_11': hex_to_rgba_str(colors[0], 1),
+        '1dpamzt': hex_to_rgba_str(colors[1], 1),
+        '1deamzt': hex_to_rgba_str(colors[2], 1),
+        '1pdeaat': hex_to_rgba_str(colors[3], 1),
+        'aacccdpt': hex_to_rgba_str(colors[4], 1),
+        '4rt700t': hex_to_rgba_str(colors[5], 1),
+        'pftank2t': hex_to_rgba_str(colors[6], 1),
+        'pm1thv2t': hex_to_rgba_str(colors[7], 1),
+        'pm2thv1t': hex_to_rgba_str(colors[7], 1),
+        'pline03t': hex_to_rgba_str(colors[8], 1),
+        'pline04t': hex_to_rgba_str(colors[9], 1),
+    }
+
+
+def generate_limited_offset_results_plot_data(limited_data, offset_data):
+
+    plot_data = [
+        {
+            'type': 'scattergl',
+            'x': limited_data.index,
+            'y': limited_data.min(axis=1),
+            'name': f'Composite Dwell Limit',
+            'mode': 'lines',
+            'line': {
+                'color': '#aaaaaa',
+                'width': 10
+            },
+            'showlegend': True,
+            'xaxis': 'x',
+            'yaxis': 'y',
+        },
+    ]
+
+    for name in limited_data.columns:
+        plot_data.append({
+            'type': 'scattergl',
+            'x': limited_data.index,
+            'y': limited_data[name],
+            'name': f'{name.upper()}: Dwell Limit',
+            'mode': 'lines',
+            'line': {
+                'color': msid_colors[name.lower()],
+                'width': 3
+            },
+            'showlegend': True,
+            'xaxis': 'x',
+            'yaxis': 'y',
+        })
+
+        plot_data.append({
+            'type': 'scattergl',
+            'x': offset_data.index,
+            'y': offset_data[name],
+            'name': f'{name.upper()}: Offset Dwell',
+            'mode': 'lines',
+            'line': {
+                'color': msid_colors[name.lower()],
+                'dash': 'dash',
+                'width': 2
+            },
+            'showlegend': True,
+            'xaxis': 'x',
+            'yaxis': 'y',
+        })
+
+    return plot_data
+
+
+def generate_limited_offset_results_timbre_plot(plot_data, title, y_max=100000):
+
+    plot_object = {
+        'data': plot_data,
+        'layout':
+            {
+                'hovermode': "closest",
+                'autosize': False,
+                'width': width + 50,
+                'height': height,
+                'margin': {'l': 50, 'r': 50, 't': 50, 'b': 50},
+                'title':
+                    {
+                        'text': title,
+                        'font': title_format,
+                        'y': 0.95,
+                        'x': 0.5,
+                        'xanchor': 'center',
+                        'yanchor': 'top'
+                    },
+                'yaxis':
+                    {
+                        'title':
+                            {
+                                'text': f'Dwell Duration',
+                                'font': label_format
+                            },
+                        'tickfont': axis_format,
+                        'zeroline': True,
+                        'linecolor': '#666666',
+                        'linewidth': 1,
+                        'mirror': True,
+                        'anchor': 'x',
+                        'range': [0, y_max],
+                        'showgrid': True,
+
+                    },
+
+                'xaxis':
+                    {
+                        'title':
+                            {
+                                'text': f'Pitch',
+                                'font': label_format
+                            },
+                        'domain': [0, 1],
+                        'tickfont': axis_format,
+                        'zeroline': True,
+                        'linecolor': '#666666',
+                        'linewidth': 1,
+                        'mirror': True,
+                        'range': [45, 180],
+                        'showticklabels': True,
+                        'anchor': 'y',
+                        'showgrid': True,
+                    },
+                'legend':
+                {
+                    'font': {
+                        'family': font,
+                        'size': 10,
+                        'color': "#666666",
+                    },
+                    # 'xanchor': 'right',
+                    # 'yanchor': 'top',
+                    # 'x': 0.98,
+                    # 'y': 0.95,
+                    'bordercolor': "#cccccc",
+                    'borderwidth': 1,
+                },
+
+                'showlegend': True,
+                'template': 'simple_white',
+            },
+    }
+    return plot_object
+
+
+def visualize_final_dwell_limits(timbre_object, max_plot_limit=100000):
+
+    def color_nan_gray(val):
+        color = 'rgba(175, 175, 175)' if np.isnan(val) else ''
+        return 'color: %s' % color
+
+    def highlight_cells(x):
+        df = pd.DataFrame('', index=x.index, columns=x.columns)
+        cell_style = 'font-weight: bold; border-color: black; border-style: solid; ' + \
+                     'border-width: 1px; border-collapse:collapse'
+        for msid, pitch in limited_anchors.items():
+            df.loc[pitch, msid] = cell_style
+        return df
+
+    def mark_limiting_factor(x):
+        lim = timbre_object.limited_results.min(axis=1)
+        pitch = np.array(lim.index)
+        df = pd.DataFrame('', index=x.index, columns=x.columns)
+        cell_style = f'color: {colors[3]};;'
+        for column in x:
+            df.loc[pitch[x[column].values == lim], column] = cell_style
+        return df
+
+    limited_anchors = {d: v['anchor_limited_pitch'] for d, v in timbre_object.anchors.items()}
+    columns = list(timbre_object.limited_results.columns)
+
+    final_formatted_limited_results = pd.concat((timbre_object.limited_results,
+                                                 timbre_object.limited_results.min(axis=1),
+                                                 timbre_object.limited_results.astype(np.float).idxmin(axis=1)), axis=1)
+    final_formatted_limited_results.columns = columns + ['Max Dwell', 'Limiting Model']
+
+    final_formatted_limited_results = final_formatted_limited_results.style \
+        .apply(highlight_cells, axis=None) \
+        .apply(mark_limiting_factor, axis=None) \
+        .set_precision(0) \
+        .bar(subset=columns+['Max Dwell', ], color=hex_to_rgba_str(colors[3], 0.25), vmin=0, vmax=max_plot_limit) \
+        .applymap(color_nan_gray, subset=columns+['Max Dwell',])
+    return final_formatted_limited_results
+
+
+def visualize_final_dwell_offsets(timbre_object, max_plot_limit=100000, tol=100):
+
+    def color_nan_gray(val):
+        color = 'rgba(175, 175, 175)' if np.isnan(val) else ''
+        return 'color: %s' % color
+
+    def highlight_cells(x):
+        df = pd.DataFrame('', index=x.index, columns=x.columns)
+        cell_style = 'font-weight: bold; border-color: black; border-style: solid; ' + \
+                     'border-width: 1px; border-collapse:collapse'
+        for msid, pitch in anchors.items():
+            df.loc[pitch, msid] = cell_style
+        return df
+
+    def mark_achievable_cooling(x):
+        lim = timbre_object.limited_results.min(axis=1)
+        pitch = np.array(lim.index)
+        df = pd.DataFrame('', index=x.index, columns=x.columns)
+        cell_style = f'color: {colors[0]};;'
+        for column in x:
+            df.loc[pitch[x[column].values < (lim + tol)], column] = cell_style
+        return df
+
+    anchors = {d: v['anchor_offset_pitch'] for d, v in timbre_object.anchors.items()}
+    columns = list(timbre_object.offset_results.columns)
+    final_formatted_results = timbre_object.offset_results.style \
+        .apply(highlight_cells, axis=None) \
+        .set_precision(0) \
+        .bar(subset=columns, color=hex_to_rgba_str(colors[0], 0.25), vmin=0, vmax=max_plot_limit) \
+        .applymap(color_nan_gray, subset=columns) \
+        .apply(mark_achievable_cooling, axis=None) \
+
+    return final_formatted_results
+

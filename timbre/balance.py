@@ -156,9 +156,10 @@ class Balance(object):
         kwargs = {'limit_type': self.limit_type, 'print_progress': False, 'n_dwells': 30}
         results1 = run_state_pairs(*args, **kwargs)
 
-        # This deals with a weird case where the anchor limited time@pitch does not reproduce the originally calculated
-        # offset time at the offset pitch. I encountered this issue with the pftank2t model with an edge case that
-        # initially had some long dwell times before refining the composite dwell curve (as a part of the algorithm).
+        # This deals with a weird case where the anchor limited time@pitch does not reproduce a converged solution at
+        # the originally calculated  offset time at the offset pitch. I encountered this issue with the pftank2t model
+        # with an edge case that initially had some long dwell times before refining the composite dwell curve (as a
+        # part of the algorithm).
         ind = results1['pitch2'] == pitch_2
         if np.isnan(results1[ind]['t_dwell2']):
             results1['t_dwell2'] = t_2_orig
@@ -445,7 +446,6 @@ class Composite(object):
 
         s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].iteritems()])
         print(f'Approximate dwell limits calculated by this iteration: \n  Pitch    Duration\n{s}')
-
 
         final_dwell_limits = copy.copy(self.dwell_limits.loc[self.pitch_range])
 
