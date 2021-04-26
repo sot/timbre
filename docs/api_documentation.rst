@@ -6,3 +6,4 @@ API documentation
 
 .. automodule:: timbre.balance
    :members:
+

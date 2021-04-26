@@ -309,6 +309,38 @@ class BalancePLINE03T(Balance):
 
 
 class Composite(object):
+    """ Generate a composite maximum dwell estimate using all thermal models.
+
+    This class can be used to automatically calculate the maximum best-case dwell duration possible for each model at
+    each limited pitch (often heating) by considering the impact each model has on available cooling for all other
+    models. This class also produces the associated offset (often cooling) dwell durations that can support the limited
+    dwell durations produced for each model.
+
+    Example::
+
+        from timbre import Composite, f_to_c
+
+        limits = {
+            "fptemp_11": -112.0,
+            "1dpamzt": 37.5,
+            "1deamzt": 37.5,
+            "1pdeaat": 52.5,
+            "aacccdpt": -6.5,
+            "4rt700t": f_to_c(100.0),
+            "pftank2t": f_to_c(110.0),
+            "pm1thv2t": f_to_c(210.0),
+            "pm2thv1t": f_to_c(210.0),
+            "pline03t": f_to_c(50.0),
+            "pline04t": f_to_c(50.0),
+        }
+
+        date = "2022:001:00:00:00"
+        chips = 4
+        roll = 0
+
+        timbre_object = Composite(date, chips, roll, limits, max_dwell=200000, pitch_step=5)
+
+    """
 
     def __init__(self, date, chips, roll, limits, max_dwell=100000, pitch_step=1, model_specs=None):
         """ Run a Xija model for a given time and state profile.
@@ -321,7 +353,7 @@ class Composite(object):
         :type roll: float or int
         :param limits: Dictionary of MSID limits
         :type limits: dict
-        :param max_dwell: Maximum allowed dwell for cooling and heating (offset and limited dwells)
+        :param max_dwell: Initial guess for maximum available cooling
         :type max_dwell: int or float
         :param model_specs: Dictionary of model parameters, if None then the `timbre.load_model_specs` method will be
             used to load all model specs.
@@ -354,8 +386,8 @@ class Composite(object):
         }
 
         # Start with only the pitch values used to map out dwell capability (from the "anchors" defined above).
-        self.pitch_range = self.get_required_pitch_values()
-        tail_pitches = self.get_required_pitch_values()
+        self.pitch_range = self._get_required_pitch_values()
+        tail_pitches = self._get_required_pitch_values()
         self.tail_pitches = tail_pitches[tail_pitches > 130]
 
         if not set(self.pitch_range).issubset(set(range(45, 181, pitch_step))):
@@ -386,15 +418,19 @@ class Composite(object):
 
         dashes = ''.join(["-", ] * 120)
         print(f'{dashes}\nMap Dwell Capability\n{dashes}')
-        self.map_composite()
+        self.composite = self.map_composite()
 
         print(f'{dashes}\nFill In Dwell Capability\n{dashes}\n')
         self.fill_composite()
 
-    def get_required_pitch_values(self):
+    def _get_required_pitch_values(self):
+        """ Get the set of all anchor limited and offset pitch values.
+        """
         return np.unique([p for msid, pitches in self.anchors.items() for p in list(pitches.values())])
 
     def balance_model(self, msid, model):
+        """ Calculate the balanced limited and offset dwell curves for one model.
+        """
         anchor_offset_pitch = self.anchors[msid]['anchor_offset_pitch']
         anchor_limited_pitch = self.anchors[msid]['anchor_limited_pitch']
 
@@ -424,6 +460,8 @@ class Composite(object):
             self.offset_results.loc[pitch, msid] = t_dwell2
 
     def map_composite(self):
+        """ Use the anchor pitch values to map the fundamental dwell balance data.
+        """
 
         dashes = ''.join(["-", ] * 40)
         print(f'\n{dashes}\nStart of Iteration:\n')
@@ -464,7 +502,8 @@ class Composite(object):
             self.map_composite()
 
     def fill_composite(self):
-
+        """ Fill in the limited and offset dwell curves after mapping the fundamental dwell balance data.
+        """
         self.pitch_range = np.array(self.dwell_limits.index)
 
         self.balance_model('1dpamzt', self.dpa)
