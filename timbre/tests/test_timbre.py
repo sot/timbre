@@ -62,10 +62,37 @@ def test_find_second_dwell():
     dwell1_state = {'pitch': 90.2}
     dwell2_state = {'pitch': 148.95}
 
+    answer = 58648.0
+
     results = timbre.find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, aca_model_spec,
                                        model_init[msid], limit_type='max')
     assert isinstance(results, dict)
-    assert np.isclose(results['dwell_2_time'], 58648.0, atol=1.0e3)
+    assert np.isclose(results['dwell_2_time'], answer, atol=1.0e3)
+
+
+def test_find_second_dwell_with_bounds():
+    """ Test the method, `find_second_dwell`, which is used to find the dwell time needed to balance t_dwell1.
+    """
+    date = '2021:001:00:00:00'
+    t_dwell1 = 20000.
+    msid = 'aacccdpt'
+    limit = -7.1
+    dwell1_state = {'pitch': 90.2}
+    dwell2_state = {'pitch': 148.95}
+
+    answer = 58648.0
+
+    results = timbre.find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, aca_model_spec,
+                                       model_init[msid], min_dwell=30000, max_dwell=80000, limit_type='max')
+    assert np.isclose(results['dwell_2_time'], answer, atol=1.0e3)
+
+    results_fail = timbre.find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, aca_model_spec,
+                                            model_init[msid], min_dwell=10000, max_dwell=30000, limit_type='max')
+    assert results_fail['unconverged_hot'] is True
+
+    results_fail = timbre.find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, aca_model_spec,
+                                            model_init[msid], min_dwell=90000, max_dwell=100000, limit_type='max')
+    assert results_fail['unconverged_cold'] is True
 
 
 def test_run_state_pairs():

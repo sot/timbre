@@ -27,6 +27,7 @@ non_state_names = {'aacccdpt': ['aca0', ],
                    'fptemp_11': ['fptemp', '1cbat', 'sim_px'],
                    '1pdeaat': ['pin1at', ]}
 
+
 def load_model_specs():
     """ Load Xija model parameters for all available models.
 
@@ -321,6 +322,7 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
         - Keys in state1 must match keys in state2.
         - Keys in state1 must match Xija component names (e.g. 'pitch', 'ccd_count', 'sim_z')
     """
+
     def opt_binary_schedule(t):
         model_results, _, _ = calc_binary_schedule(datesecs, dwell1_state, dwell2_state, t_dwell1, t, msid,
                                                    model_spec, init, duration=duration, t_backoff=t_backoff)
@@ -338,7 +340,7 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
 
 
 def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, model_spec, init, limit_type='max',
-                      duration=2592000, t_backoff=1725000, n_dwells=10, max_dwell=None, pseudo=None):
+                      duration=2592000, t_backoff=1725000, n_dwells=10, min_dwell=None, max_dwell=None, pseudo=None):
     """ Determine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1, if any exists.
 
     :param date: Date for start of simulation, in seconds from '1997:365:23:58:56.816' (cxotime.CxoTime epoch) or any
@@ -367,7 +369,10 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     :type t_backoff: float, optional
     :param n_dwells: Number of second dwell, `t_dwell2`,  possibilities to run (more dwells = finer resolution)
     :type n_dwells: int, optional
-    :param max_dwell: Maximum duration for second dwell, can be tuned to provide better results
+    :param min_dwell: Minimum duration for second dwell, can be used if the user wants to narrow the dwell time search,
+        defaults to 1.0e-6s
+    :type min_dwell: float, optional
+    :param max_dwell: Maximum duration for second dwell, can be used if the user wants to narrow the dwell time search
     :type max_dwell: float, optional
     :param pseudo: Name of one or more pseudo MSIDs used in the model, if any, only necessary if one wishes to retrieve
         model results for this pseudo node, if it exists. This currently is not used but kept here as a placeholder.
@@ -390,9 +395,12 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
         # Subtract 1000 sec for extra padding.
         max_dwell = (t_backoff - t_dwell1) / 3 - 1000
 
+    if min_dwell is None:
+        min_dwell = 1.0e-6
+
     results = {'converged': False, 'unconverged_hot': False, 'unconverged_cold': False,
                'min_temp': np.nan, 'mean_temp': np.nan, 'max_temp': np.nan, 'temperature_limit': limit,
-               'dwell_2_time': np.nan, 'min_pseudo': np.nan, 'mean_pseudo': np.nan,  'max_pseudo': np.nan,
+               'dwell_2_time': np.nan, 'min_pseudo': np.nan, 'mean_pseudo': np.nan, 'max_pseudo': np.nan,
                'hotter_state': np.nan, 'colder_state': np.nan}
 
     # Ensure t_dwell1 is a float, may not be necessary anymore
@@ -402,7 +410,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
                              duration)
 
     # First just check the bounds to avoid unnecessary runs of `opt_fun`
-    output = np.array([opt_fun(t) for t in [1.0e-6, max_dwell]],
+    output = np.array([opt_fun(t) for t in [min_dwell, max_dwell]],
                       dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64), ('min', np.float64)])
 
     if 'max' in limit_type:
@@ -417,7 +425,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
         # Temperatures straddle the limit, so a refined dwell 2 time is possible.
         else:
-            results, output = _refine_dwell2_time('max', n_dwells, max_dwell, limit, opt_fun, results)
+            results, output = _refine_dwell2_time('max', n_dwells, min_dwell, max_dwell, limit, opt_fun, results)
 
     elif 'min' in limit_type:
 
@@ -431,7 +439,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
 
         # Temperatures straddle the limit, so a refined dwell 2 time is possible.
         else:
-            results, output = _refine_dwell2_time('min', n_dwells, max_dwell, limit, opt_fun, results)
+            results, output = _refine_dwell2_time('min', n_dwells, min_dwell, max_dwell, limit, opt_fun, results)
 
     if output['max'][0] > output['max'][-1]:
         results['hotter_state'] = 1
@@ -497,7 +505,7 @@ def _handle_unconverged_cold(output, results):
     return results
 
 
-def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results):
+def _refine_dwell2_time(limit_type, n_dwells, min_dwell, max_dwell, limit, opt_fun, results):
     """ Refine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1.
 
     This is intended to be run solely by find_second_dwell() to refine the amount of dwell 2 time is necessary to
@@ -509,7 +517,10 @@ def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results
     :type limit_type: str
     :param n_dwells: Number of second dwell possibilities to run (more dwells = finer resolution)
     :type n_dwells: int
-    :param max_dwell: Maximum duration for second dwell, can be tuned to provide better results
+    :param min_dwell: Minimum duration for second dwell, can be used if the user wants to narrow the dwell time search,
+        defaults to 1.0e-6s
+    :type min_dwell: float
+    :param max_dwell: Maximum duration for second dwell, can be used if the user wants to narrow the dwell time search
     :type max_dwell: float
     :param limit: Limit in Celsius for current simulation
     :type limit: float
@@ -534,7 +545,8 @@ def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results
 
     # dwell2_range defines the possible dwell 2 guesses, first defined in log space
     dwell2_range = np.logspace(1.0e-6, 1, n_dwells, endpoint=True) / n_dwells
-    dwell2_range = max_dwell * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
+    dwell2_range = min_dwell + \
+                   (max_dwell - min_dwell) * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
 
     # Run the dwell1_state-dwell2_state schedule using the possible dwell 2 guesses
     output = np.array([opt_fun(t) for t in dwell2_range], dtype=[('duration2', np.float64), ('max', np.float64),
@@ -583,7 +595,7 @@ def _refine_dwell2_time(limit_type, n_dwells, max_dwell, limit, opt_fun, results
 
 
 def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state_pairs, limit_type='max',
-                    max_dwell=None, n_dwells=10, print_progress=True, shared_data=None):
+                    min_dwell=None, max_dwell=None, n_dwells=10, print_progress=True, shared_data=None):
     """ Determine dwell balance times for a set of cases.
 
     :param msid: Primary MSID for model being run
@@ -605,8 +617,11 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
     :type state_pairs: list or tuple
     :param limit_type: Type of limit, defaults to 'max' (a maximum temperature limit), other option is 'min'
     :type limit_type: str, optional
-    :param max_dwell: Maximum duration for second dwell, can be tuned to provide better results
-    :type max_dwell: float, optional
+    :param min_dwell: Minimum duration for second dwell, can be used if the user wants to narrow the dwell time search,
+        defaults to 1.0e-6s
+    :type min_dwell: float
+    :param max_dwell: Maximum duration for second dwell, can be used if the user wants to narrow the dwell time search
+    :type max_dwell: float
     :param n_dwells: Number of second dwell, `t_dwell2`,  possibilities to run (more dwells = finer resolution)
     :type n_dwells: int, optional
     :param shared_data: Shared list of results, used when running multiple `run_state_pairs` threads in parallel via
@@ -696,7 +711,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
 
         dwell_results = find_second_dwell(date, dwell1_state, dwell2_state, dwell_1_duration, msid, limit, model_spec,
                                           init, limit_type=limit_type, duration=duration, t_backoff=t_backoff,
-                                          n_dwells=n_dwells, max_dwell=max_dwell, pseudo=None)
+                                          n_dwells=n_dwells, min_dwell=min_dwell, max_dwell=max_dwell, pseudo=None)
 
         row = [msid.encode('utf-8'),
                datestr.encode('utf-8'),
