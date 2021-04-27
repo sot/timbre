@@ -1,0 +1,182 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timbre Thermal Dwell Balance Estimation Tool &#8212; Timbre 0.13 documentation</title>
+    <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <script type="text/javascript" src="_static/sidebar.js"></script>
+    <script type="text/javascript" src="_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Building Blocks of a Timbre Simulation" href="building_blocks.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="#"><span id="logotext1">Ska!</span><span id="logotext2">timbre</span><span id="logotext3"></span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="None Yet">
+        <span id="logotext1">ska</span><span id="logotext2">tools</span>
+    </a></li>
+    <li><a title="General Index" href="genindex.html">Index</a></li>
+    <li><a title="Module Index" href="py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li class="right">
+	<a href="building_blocks.html" title="Building Blocks of a Timbre Simulation">
+	  next &raquo;
+	</a>
+      </li>
+      <li>
+	<a href="#">Timbre 0.13 documentation</a>
+	 &#187;
+      </li>
+      
+       
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="timbre-thermal-dwell-balance-estimation-tool">
+<h1>Timbre Thermal Dwell Balance Estimation Tool<a class="headerlink" href="#timbre-thermal-dwell-balance-estimation-tool" title="Permalink to this headline">¶</a></h1>
+<p>The timbre package enables one to calculate the required contiguous cold time to balance a specified hot observation, or
+alternatively the maximum contiguous hot time yielded by a given cold observation, for a given Xija thermal model.</p>
+<p>The primary purpose of this package is to enable the Chandra SOT Mission Planning Team to estimate the required mix of
+observations that will yield a feasible schedule, without depending on past dwell profiles that may no longer be
+relevant for future schedules.</p>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>As Chandra’s external thermal protective surfaces degrade over time, resulting in steadily increasing heat absorption
+from the sun, many components have begun to approach their health and safety thermal limits. As these components begin
+to approach their limits, predictive thermal models for these locations are built using the Xija thermal modeling
+framework, enabling SOT and FOT Mission Planning to plan observation schedules that maintain temperatures within
+specified limits. These limits are set based on original qualification testing, material-based capability, or other
+performance-based criteria, and are re-evaluated periodically to balance scheduling challenges with vehicle performance
+towards optimizing science goals.</p>
+<p>Occasionally, new locations need to be added to this set of modeled components, resulting in new planning challenges and
+rendering past scheduling strategies incompatible with future scheduling requirements. The algorithm Timbre uses to
+determine dwell time is independent of past profiles, and is therefore more flexible than approaches that have used
+these past observing profiles to characterize future capability, which had worked very well earlier in the mission.</p>
+<p>This documentation will first cover how to run Timbre to calculate the estimated dwell time to balance two known
+configurations (e.g. pitch, roll, fep_count, etc.) and a known initial dwell time. After covering very basic usage,
+further examples will cover how to run multiple simulations, and eventually how to use this data to characterize dwell
+capability over a range of inputs.</p>
+</div>
+<div class="section" id="notebook-produced-documentation">
+<h2>Notebook-Produced Documentation<a class="headerlink" href="#notebook-produced-documentation" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="building_blocks.html">Building Blocks of a Timbre Simulation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="building_blocks.html#Package-Imports">Package Imports</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building_blocks.html#Define-Model-Information">Define Model Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building_blocks.html#Define-Dwell-#1-Information">Define Dwell #1 Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building_blocks.html#Define-Dwell-#2-Information">Define Dwell #2 Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building_blocks.html#Calculate-Dwell-#2-Time">Calculate Dwell #2 Time</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building_blocks.html#Explanation-of-Results">Explanation of Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building_blocks.html#Batch-Processing">Batch Processing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building_blocks.html#Background:-How-Timbre-Works">Background: How Timbre Works</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="model_characterization.html">Model Characterization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="model_characterization.html#Using-Timbre-to-Characterize-a-Model-The-Original-Way">Using Timbre to Characterize a Model The Original Way</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model_characterization.html#Using-Timbre-to-Plot-Balanced-Heating-and-Cooling-Time-(New-Algorithm)">Using Timbre to Plot Balanced Heating and Cooling Time (New Algorithm)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model_characterization.html#Generate-a-Composite-Maximum-Dwell-Estimate">Generate a Composite Maximum Dwell Estimate</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="shorter_durations.html">Application of Timbre Estimates for Shorter Durations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_documentation.html">API documentation</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+<ul>
+<li><a class="reference internal" href="#">Timbre Thermal Dwell Balance Estimation Tool</a><ul>
+<li><a class="reference internal" href="#introduction">Introduction</a></li>
+<li><a class="reference internal" href="#notebook-produced-documentation">Notebook-Produced Documentation</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+
+
+  <h4>Next topic</h4>
+  <p class="topless"><a href="building_blocks.html"
+                        title="next chapter">Building Blocks of a Timbre Simulation</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right">
+    <a href="_sources/index.rst.txt"
+       rel="nofollow">Page Source</a> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2020, Matthew Dahmer.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>

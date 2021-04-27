@@ -1,0 +1,649 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API documentation &#8212; Timbre 0.13 documentation</title>
+    <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <script type="text/javascript" src="_static/sidebar.js"></script>
+    <script type="text/javascript" src="_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Application of Timbre Estimates for Shorter Durations" href="shorter_durations.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="index.html"><span id="logotext1">Ska!</span><span id="logotext2">timbre</span><span id="logotext3"></span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="None Yet">
+        <span id="logotext1">ska</span><span id="logotext2">tools</span>
+    </a></li>
+    <li><a title="General Index" href="genindex.html">Index</a></li>
+    <li><a title="Module Index" href="py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li class="right">
+	<a href="shorter_durations.html" title="Application of Timbre Estimates for Shorter Durations">
+	  &laquo; previous
+	</a>
+	
+      </li>
+      <li>
+	<a href="index.html">Timbre 0.13 documentation</a>
+	 &#187;
+      </li>
+      
+      <li>API documentation</li> 
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-timbre.timbre">
+<span id="api-documentation"></span><h1>API documentation<a class="headerlink" href="#module-timbre.timbre" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt id="timbre.timbre.c_to_f">
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">c_to_f</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">temp</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.c_to_f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert Celsius to Fahrenheit.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>temp</strong> (<em>int</em><em> or </em><em>float</em><em> or </em><em>tuple</em><em> or </em><em>list</em><em> or </em><em>np.ndarray</em>) – Temperature in Celsius</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Temperature in Fahrenheit</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>int or float or list or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="timbre.timbre.calc_binary_schedule">
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">calc_binary_schedule</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">datesecs</span></em>, <em class="sig-param"><span class="n">state1</span></em>, <em class="sig-param"><span class="n">state2</span></em>, <em class="sig-param"><span class="n">t_dwell1</span></em>, <em class="sig-param"><span class="n">t_dwell2</span></em>, <em class="sig-param"><span class="n">msid</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">init</span></em>, <em class="sig-param"><span class="n">duration</span><span class="o">=</span><span class="default_value">2592000.0</span></em>, <em class="sig-param"><span class="n">t_backoff</span><span class="o">=</span><span class="default_value">1725000.0</span></em>, <em class="sig-param"><span class="n">pseudo</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.calc_binary_schedule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simulate a schedule that switches between two states</p>
+<p>This runs the model over a “binary” schedule. This function is intended to be used to optimize the <cite>t_dwell2</cite>
+parameter so that the predicted temperature during the last <cite>t_backoff</cite> number of seconds reaches a limit within a
+tolerance (limit used and specified in a different function).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>datesecs</strong> (<em>float</em><em> or </em><em>int</em>) – Date for start of simulation, in seconds from ‘1997:365:23:58:56.816’ (cxotime.CxoTime epoch)</p></li>
+<li><p><strong>state1</strong> (<em>dict</em>) – States for fixed dwell (pitch, roll, ccds, etc.)</p></li>
+<li><p><strong>state2</strong> (<em>dict</em>) – States for variable dwell (pitch, roll, ccds, etc.)</p></li>
+<li><p><strong>t_dwell1</strong> (<em>float</em><em> or </em><em>int</em>) – Fixed dwell duration in seconds</p></li>
+<li><p><strong>t_dwell2</strong> (<em>float</em><em> or </em><em>int</em>) – Variable dwell duration in seconds (this is the parameter that is optimized)</p></li>
+<li><p><strong>msid</strong> (<em>str</em>) – Primary MSID for model being run</p></li>
+<li><p><strong>model_spec</strong> (<em>dict</em><em>, </em><em>string</em>) – Dictionary of model parameters or file location where parameters can be imported</p></li>
+<li><p><strong>init</strong> (<em>dict</em>) – Dictionary of Xija model initialization parameters</p></li>
+<li><p><strong>duration</strong> (<em>float</em><em>, </em><em>optional</em>) – Duration for entire simulated schedule, defaults to 30 days (in seconds)</p></li>
+<li><p><strong>t_backoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Duration for tail end of simulated schedule used to determine convergence, defaults to 10 days
+(in seconds)</p></li>
+<li><p><strong>pseudo</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of one or more pseudo MSIDs used in the model, if any, only necessary if one wishes to retrieve
+model results for this pseudo node, if it exists. This currently is not used but kept here as a placeholder.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><dl class="simple">
+<dt><strong>results</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>) - keys are node names (e.g. ‘aacccdpt’, ‘aca0’), values are Xija model component</dt><dd><p>objects, this is the same object returned by <cite>run_profile</cite></p>
+</dd>
+</dl>
+</li>
+<li><p><strong>times</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">np.ndarray</span></code>) - time values input into Xija (may not exactly match Xija output)</p></li>
+<li><dl class="simple">
+<dt><strong>state_keys</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">np.ndarray</span></code>) - defines state order, with elements matching the time array output</dt><dd><p>(may not exactly match Xija output), this defines where to insert what state</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+<p>Notes:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Keys in state1 must match keys in state2.</p></li>
+<li><p>Keys in state1 must match Xija component names (e.g. ‘pitch’, ‘ccd_count’, ‘sim_z’)</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt id="timbre.timbre.create_opt_fun">
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">create_opt_fun</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">datesecs</span></em>, <em class="sig-param"><span class="n">dwell1_state</span></em>, <em class="sig-param"><span class="n">dwell2_state</span></em>, <em class="sig-param"><span class="n">t_dwell1</span></em>, <em class="sig-param"><span class="n">msid</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">init</span></em>, <em class="sig-param"><span class="n">t_backoff</span></em>, <em class="sig-param"><span class="n">duration</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.create_opt_fun" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a Xija model function with preset values, for use with an optimization routine.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>datesecs</strong> (<em>float</em><em> or </em><em>int</em>) – Date for start of simulation, in seconds from ‘1997:365:23:58:56.816’ (cxotime.CxoTime epoch)</p></li>
+<li><p><strong>dwell1_state</strong> (<em>dict</em>) – States for fixed dwell (pitch, roll, ccds, etc.)</p></li>
+<li><p><strong>dwell2_state</strong> (<em>dict</em>) – States for variable dwell (pitch, roll, ccds, etc.)</p></li>
+<li><p><strong>t_dwell1</strong> (<em>float</em><em> or </em><em>int</em>) – Fixed dwell duration in seconds</p></li>
+<li><p><strong>msid</strong> (<em>str</em>) – Primary MSID for model being run</p></li>
+<li><p><strong>model_spec</strong> (<em>dict</em><em>, </em><em>string</em>) – Dictionary of model parameters or file location where parameters can be imported</p></li>
+<li><p><strong>init</strong> (<em>dict</em>) – Dictionary of Xija model initialization parameters</p></li>
+<li><p><strong>t_backoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Duration for tail end of simulated schedule used to determine convergence, defaults to 10 days
+(in seconds)</p></li>
+<li><p><strong>duration</strong> (<em>float</em><em>, </em><em>optional</em>) – Duration for entire simulated schedule, defaults to 30 days (in seconds)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Function generated from specified parameters, to be passed to optimization routine</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>function</p>
+</dd>
+</dl>
+<p>Notes:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Keys in state1 must match keys in state2.</p></li>
+<li><p>Keys in state1 must match Xija component names (e.g. ‘pitch’, ‘ccd_count’, ‘sim_z’)</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt id="timbre.timbre.f_to_c">
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">f_to_c</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">temp</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.f_to_c" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert Fahrenheit to Celsius.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>temp</strong> (<em>int</em><em> or </em><em>float</em><em> or </em><em>tuple</em><em> or </em><em>list</em><em> or </em><em>np.ndarray</em>) – Temperature in Fahrenheit</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Temperature in Celsius</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>int or float or list or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="timbre.timbre.find_second_dwell">
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">find_second_dwell</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">dwell1_state</span></em>, <em class="sig-param"><span class="n">dwell2_state</span></em>, <em class="sig-param"><span class="n">t_dwell1</span></em>, <em class="sig-param"><span class="n">msid</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">init</span></em>, <em class="sig-param"><span class="n">limit_type</span><span class="o">=</span><span class="default_value">'max'</span></em>, <em class="sig-param"><span class="n">duration</span><span class="o">=</span><span class="default_value">2592000</span></em>, <em class="sig-param"><span class="n">t_backoff</span><span class="o">=</span><span class="default_value">1725000</span></em>, <em class="sig-param"><span class="n">n_dwells</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">min_dwell</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">max_dwell</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">pseudo</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.find_second_dwell" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1, if any exists.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date</strong> (<em>float</em><em> or </em><em>int</em><em> or </em><em>str</em>) – Date for start of simulation, in seconds from ‘1997:365:23:58:56.816’ (cxotime.CxoTime epoch) or any
+other format readable by cxotime.CxoTime</p></li>
+<li><p><strong>dwell1_state</strong> (<em>dict</em>) – States for fixed dwell (pitch, roll, ccds, etc.)</p></li>
+<li><p><strong>dwell2_state</strong> (<em>dict</em>) – States for variable dwell (pitch, roll, ccds, etc.)</p></li>
+<li><p><strong>t_dwell1</strong> (<em>float</em><em> or </em><em>int</em>) – Fixed dwell duration in seconds</p></li>
+<li><p><strong>msid</strong> (<em>str</em>) – Primary MSID for model being run</p></li>
+<li><p><strong>limit</strong> (<em>float</em>) – Temperature limit for primary MSID in model for this simulation</p></li>
+<li><p><strong>model_spec</strong> (<em>dict</em><em>, </em><em>string</em>) – Dictionary of model parameters or file location where parameters can be imported</p></li>
+<li><p><strong>init</strong> (<em>dict</em>) – Dictionary of Xija model initialization parameters</p></li>
+<li><p><strong>limit_type</strong> (<em>str</em><em>, </em><em>optional</em>) – Type of limit, defaults to ‘max’ (a maximum temperature limit), other option is ‘min’</p></li>
+<li><p><strong>duration</strong> (<em>float</em><em>, </em><em>optional</em>) – Duration for entire simulated schedule, defaults to 30 days (in seconds)</p></li>
+<li><p><strong>t_backoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Duration for tail end of simulated schedule used to determine convergence, defaults to 10 days
+(in seconds)</p></li>
+<li><p><strong>n_dwells</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of second dwell, <cite>t_dwell2</cite>,  possibilities to run (more dwells = finer resolution)</p></li>
+<li><p><strong>min_dwell</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum duration for second dwell, can be used if the user wants to narrow the dwell time search,
+defaults to 1.0e-6s</p></li>
+<li><p><strong>max_dwell</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum duration for second dwell, can be used if the user wants to narrow the dwell time search</p></li>
+<li><p><strong>pseudo</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of one or more pseudo MSIDs used in the model, if any, only necessary if one wishes to retrieve
+model results for this pseudo node, if it exists. This currently is not used but kept here as a placeholder.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dictionary of results information</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="timbre.timbre.get_local_model">
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">get_local_model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.get_local_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load parameters for a single Xija model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – File path to local model specification file</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Model spec as a dictionary, md5 hash of model spec</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="timbre.timbre.load_model_specs">
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">load_model_specs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.load_model_specs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load Xija model parameters for all available models.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A dictionary containing the model specifications for all available Xija models</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+<p>Note:
+This will need to be updated as new models are approved or existing models are renamed.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="timbre.timbre.run_profile">
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">run_profile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">times</span></em>, <em class="sig-param"><span class="n">schedule</span></em>, <em class="sig-param"><span class="n">msid</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">init</span></em>, <em class="sig-param"><span class="n">pseudo</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.run_profile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run a Xija model for a given time and state profile.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>times</strong> (<em>np.ndarray</em>) – Array of time values, in seconds from ‘1997:365:23:58:56.816’ (cxotime.CxoTime epoch)</p></li>
+<li><p><strong>schedule</strong> (<em>dict</em>) – Dictionary of pitch, roll, etc. values that match the time values specified above in <cite>times</cite></p></li>
+<li><p><strong>msid</strong> (<em>str</em>) – Primary MSID for model being run</p></li>
+<li><p><strong>model_spec</strong> (<em>dict</em><em> or </em><em>string</em>) – Dictionary of model parameters or file location where parameters can be imported</p></li>
+<li><p><strong>init</strong> (<em>dict</em>) – Dictionary of Xija model initialization parameters, can be empty but not recommended</p></li>
+<li><p><strong>pseudo</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Name of one or more pseudo MSIDs used in the model, if any, only necessary if one
+wishes to retrieve model results for this pseudo node, if it exists</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Results, keys are node names (e.g. ‘aacccdpt’, ‘aca0’), values are Xija model component objects</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">CxoTime</span><span class="p">([</span><span class="s1">&#39;2019:001:00:00:00&#39;</span><span class="p">,</span> <span class="s1">&#39;2019:001:12:00:00&#39;</span><span class="p">,</span> <span class="s1">&#39;2019:002:00:00:00&#39;</span><span class="p">,</span> <span class="mi">2019</span><span class="p">:</span><span class="mi">003</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mi">00</span><span class="s1">&#39;]).secs)</span>
+<span class="n">pitch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">150</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span> <span class="mi">156</span><span class="p">,</span> <span class="mi">156</span><span class="p">])</span>
+<span class="n">schedule</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="n">pitch</span><span class="p">}</span>
+<span class="n">model_specs</span> <span class="o">=</span> <span class="n">load_model_specs</span><span class="p">()</span>
+<span class="n">init</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;1dpamzt&#39;</span><span class="p">:</span> <span class="mf">20.</span><span class="p">,</span> <span class="s1">&#39;dpa0&#39;</span><span class="p">:</span> <span class="mf">20.</span><span class="p">,</span> <span class="s1">&#39;eclipse&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;roll&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;vid_board&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;clocking&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s1">&#39;fep_count&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;ccd_count&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;sim_z&#39;</span><span class="p">:</span> <span class="mi">100000</span><span class="p">}</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">run_profile</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="n">pitch</span><span class="p">,</span> <span class="s1">&#39;1dpamzt&#39;</span><span class="p">,</span> <span class="n">model_specs</span><span class="p">[</span><span class="s1">&#39;1dpamzt&#39;</span><span class="p">],</span> <span class="n">init</span><span class="p">,</span> <span class="n">pseudo</span><span class="o">=</span><span class="s1">&#39;dpa0&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note:</p>
+<p>Any parameters specified in <cite>init</cite> will be overwritten by those specified in the body of this function, if they
+happen to be defined in both places.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="timbre.timbre.run_state_pairs">
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">run_state_pairs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msid</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">init</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">dwell_1_duration</span></em>, <em class="sig-param"><span class="n">state_pairs</span></em>, <em class="sig-param"><span class="n">limit_type</span><span class="o">=</span><span class="default_value">'max'</span></em>, <em class="sig-param"><span class="n">min_dwell</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">max_dwell</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">n_dwells</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">print_progress</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">shared_data</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.run_state_pairs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine dwell balance times for a set of cases.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msid</strong> (<em>str</em>) – Primary MSID for model being run</p></li>
+<li><p><strong>model_spec</strong> (<em>dict</em><em>, </em><em>string</em>) – Dictionary of model parameters or file location where parameters can be imported</p></li>
+<li><p><strong>init</strong> (<em>dict</em>) – Dictionary of Xija model initialization parameters</p></li>
+<li><p><strong>limit</strong> (<em>float</em>) – Temperature limit for primary MSID in model for this simulation</p></li>
+<li><p><strong>date</strong> (<em>float</em><em> or </em><em>int</em><em> or </em><em>str</em>) – Date for start of simulation, in seconds from ‘1997:365:23:58:56.816’ (cxotime.CxoTime epoch) or any
+other format readable by cxotime.CxoTime</p></li>
+<li><p><strong>dwell_1_duration</strong> (<em>float</em><em> or </em><em>int</em>) – Duration in seconds of dwell 1, also viewed as the known or defined dwell duration, for
+which one wants to find a complementary dwell duration (dwell duration 2)</p></li>
+<li><p><strong>state_pairs</strong> (<em>list</em><em> or </em><em>tuple</em>) – Iterable of dictionary pairs, where each pair of dictionaries contain dwell1 and dwell2 states,
+see state_pair section below for further details</p></li>
+<li><p><strong>limit_type</strong> (<em>str</em><em>, </em><em>optional</em>) – Type of limit, defaults to ‘max’ (a maximum temperature limit), other option is ‘min’</p></li>
+<li><p><strong>min_dwell</strong> (<em>float</em>) – Minimum duration for second dwell, can be used if the user wants to narrow the dwell time search,
+defaults to 1.0e-6s</p></li>
+<li><p><strong>max_dwell</strong> (<em>float</em>) – Maximum duration for second dwell, can be used if the user wants to narrow the dwell time search</p></li>
+<li><p><strong>n_dwells</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of second dwell, <cite>t_dwell2</cite>,  possibilities to run (more dwells = finer resolution)</p></li>
+<li><p><strong>shared_data</strong> (<em>multiprocessing.managers.ListProxy</em><em>, </em><em>optoinal</em>) – Shared list of results, used when running multiple <cite>run_state_pairs</cite> threads in parallel via
+the multiprocessing package</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Structured numpy array of results</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+<p>State Pairs Data Structure:</p>
+<p>The state pairs data structure, <cite>state_pairs</cite>, are pairs of dictionaries specifying the two conditions used for a
+Timbre simulation. The keys in these dictionaries must match the Xija component names they refer to (e.g. ‘pitch’,
+‘ccd_count’, ‘cossrbx_on’, etc.).</p>
+<p>State information that does not change from dwell1 to dwell2 can be specified in the model initialization
+dictionary. <cite>init</cite>. State information that does change from dwell1 to dwell2 should be specified in the state pairs
+dictionary described above. Dictionary names for states should match those expected by Xija (e.g. fep_count, roll,
+sim_z).</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model_init</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;aacccdpt&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;aacccdpt&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mf">7.</span><span class="p">,</span> <span class="s1">&#39;aca0&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mf">7.</span><span class="p">,</span> <span class="s1">&#39;eclipse&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">},</span> <span class="p">}</span>
+<span class="n">model_specs</span> <span class="o">=</span> <span class="n">load_model_specs</span><span class="p">()</span>
+<span class="n">date</span> <span class="o">=</span> <span class="s1">&#39;2021:001:00:00:00&#39;</span>
+<span class="n">t_dwell1</span> <span class="o">=</span> <span class="mf">20000.</span>
+<span class="n">msid</span> <span class="o">=</span> <span class="s1">&#39;aacccdpt&#39;</span>
+<span class="n">limit</span> <span class="o">=</span> <span class="o">-</span><span class="mf">7.1</span>
+<span class="n">state_pairs</span> <span class="o">=</span> <span class="p">(({</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mf">144.2</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mf">154.95</span><span class="p">}),</span>
+               <span class="p">({</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mf">90.2</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mf">148.95</span><span class="p">}),</span>
+               <span class="p">({</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mi">140</span><span class="p">}),</span>
+               <span class="p">({</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mi">90</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">}),</span>
+               <span class="p">({</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mi">75</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mi">130</span><span class="p">}),</span>
+               <span class="p">({</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mi">170</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mi">90</span><span class="p">}),</span>
+               <span class="p">({</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mi">90</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="mi">170</span><span class="p">}))</span>
+<span class="n">state_pair_dtype</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;pitch&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">}</span>
+
+<span class="n">results</span> <span class="o">=</span> <span class="n">run_state_pairs</span><span class="p">(</span><span class="n">msid</span><span class="p">,</span> <span class="n">model_specs</span><span class="p">[</span><span class="n">msid</span><span class="p">],</span> <span class="n">model_init</span><span class="p">[</span><span class="n">msid</span><span class="p">],</span> <span class="n">limit</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">t_dwell1</span><span class="p">,</span> <span class="n">state_pairs</span><span class="p">,</span>
+    <span class="n">state_pair_dtype</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="timbre.timbre.setup_model">
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">setup_model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msid</span></em>, <em class="sig-param"><span class="n">t0</span></em>, <em class="sig-param"><span class="n">t1</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">init</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.setup_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create Xija model object</p>
+<p>This function creates a Xija model object with initial parameters, if any. This function is intended to create a
+streamlined method to creating Xija models that can take both single value data and time defined data
+(e.g. [pitch1, pitch2, pitch3], [time1, time2, time3]), defined in the <cite>init</cite> dictionary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msid</strong> (<em>str</em>) – Primary MSID for model; in this case it can be anything as it is only being used to name the model,
+however keeping the convention to name the model after the primary MSID being predicted reduces confusion</p></li>
+<li><p><strong>t0</strong> (<em>str</em><em> or </em><em>float</em><em> or </em><em>int</em>) – Start time for model prediction; this can be any format that cxotime.CxoTime accepts</p></li>
+<li><p><strong>t1</strong> (<em>str</em><em> or </em><em>float</em><em> or </em><em>int</em>) – End time for model prediction; this can be any format that cxotime.CxoTime accepts</p></li>
+<li><p><strong>model_spec</strong> (<em>dict</em><em>, </em><em>str</em>) – Dictionary of model parameters or file location where parameters can be imported</p></li>
+<li><p><strong>init</strong> (<em>dict</em>) – Dictionary of Xija model initialization parameters, can be empty</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>xija.model.XijaModel</p>
+</dd>
+</dl>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model_specs</span> <span class="o">=</span> <span class="n">load_model_specs</span><span class="p">()</span>
+<span class="n">init</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;1dpamzt&#39;</span><span class="p">:</span> <span class="mf">35.</span><span class="p">,</span> <span class="s1">&#39;dpa0&#39;</span><span class="p">:</span> <span class="mf">35.</span><span class="p">,</span> <span class="s1">&#39;eclipse&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;roll&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;vid_board&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;pitch&#39;</span><span class="p">:</span><span class="mi">155</span><span class="p">,</span>
+        <span class="s1">&#39;clocking&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;fep_count&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;ccd_count&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;sim_z&#39;</span><span class="p">:</span> <span class="mi">100000</span><span class="p">}</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">setup_model</span><span class="p">(</span><span class="s1">&#39;1dpamzt&#39;</span><span class="p">,</span> <span class="s1">&#39;2019:001:00:00:00&#39;</span><span class="p">,</span> <span class="s1">&#39;2019:010:00:00:00&#39;</span><span class="p">,</span> <span class="n">model_specs</span><span class="p">[</span><span class="s1">&#39;1dpamzt&#39;</span><span class="p">],</span> <span class="n">init</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Notes:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>This does not run the model, only sets up the model to be run.</p></li>
+<li><p>Any parameters not specified in <cite>init</cite> will either need to be pulled from telemetry or explicitly defined      outside of this function before running the model.</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<span class="target" id="module-timbre.balance"></span><dl class="py class">
+<dt id="timbre.balance.Balance">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">Balance</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">constant_conditions</span></em>, <em class="sig-param"><span class="n">margin_factor</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.Balance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for defining individual thermal balance calculation objects</p>
+<dl class="py method">
+<dt id="timbre.balance.Balance.find_anchor_condition">
+<code class="sig-name descname">find_anchor_condition</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">p_offset</span></em>, <em class="sig-param"><span class="n">p_limited</span></em>, <em class="sig-param"><span class="n">anchor_offset_time</span></em>, <em class="sig-param"><span class="n">limit</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.Balance.find_anchor_condition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a known offset duration, determine the maximum dwell time for the anchor limited pitch.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p_offset</strong> (<em>float</em>) – Anchor offset pitch</p></li>
+<li><p><strong>p_limited</strong> (<em>float</em>) – Anchor limited pitch</p></li>
+<li><p><strong>anchor_offset_time</strong> (<em>float</em>) – Anchor offset dwell duration (seconds)</p></li>
+<li><p><strong>limit</strong> (<em>float</em>) – Thermal limit</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="timbre.balance.Balance.generate_balanced_pitch_dwells">
+<code class="sig-name descname">generate_balanced_pitch_dwells</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">datesecs</span></em>, <em class="sig-param"><span class="n">pitch_1</span></em>, <em class="sig-param"><span class="n">t_1</span></em>, <em class="sig-param"><span class="n">pitch_2</span></em>, <em class="sig-param"><span class="n">t_2_orig</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">pitch_range</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.Balance.generate_balanced_pitch_dwells" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the balanced heating and cooling dwell curves seeded by <cite>pitch_1</cite> and <cite>pitch_2</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>datesecs</strong> (<em>float</em>) – Date used for simulation (seconds)</p></li>
+<li><p><strong>pitch_1</strong> (<em>float</em>) – Anchor limited pitch</p></li>
+<li><p><strong>t_1</strong> (<em>float</em>) – Anchor limited dwell duration (seconds)</p></li>
+<li><p><strong>pitch_2</strong> (<em>float</em>) – Anchor offset pitch</p></li>
+<li><p><strong>t_2_orig</strong> (<em>float</em>) – Originally calculated anchor offset dwell duration (seconds)</p></li>
+<li><p><strong>limit</strong> (<em>float</em>) – Thermal limit</p></li>
+<li><p><strong>pitch_range</strong> (<em>iterable</em><em> (</em><em>list</em><em>, </em><em>numpy.ndarray</em><em>)</em>) – Pitch values used to define dwell limits</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="simple">
+<dt>A balanced set of dwell curves are calculated in two steps:</dt><dd><ol class="arabic simple">
+<li><p>Calculate the offset dwell curve yielded by <cite>pitch_1</cite> at <cite>t_1</cite>.</p></li>
+<li><p>Use the time calculated in step 1 for <cite>pitch_2</cite> with this pitch to determine the limited dwell curve.</p></li>
+</ol>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="timbre.balance.Balance1DEAMZT">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">Balance1DEAMZT</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">constant_conditions</span></em>, <em class="sig-param"><span class="n">margin_factor</span><span class="o">=</span><span class="default_value">0.95</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.Balance1DEAMZT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="timbre.balance.Balance1DPAMZT">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">Balance1DPAMZT</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">constant_conditions</span></em>, <em class="sig-param"><span class="n">margin_factor</span><span class="o">=</span><span class="default_value">0.95</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.Balance1DPAMZT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="timbre.balance.Balance1PDEAAT">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">Balance1PDEAAT</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">constant_conditions</span></em>, <em class="sig-param"><span class="n">margin_factor</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.Balance1PDEAAT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="timbre.balance.Balance4RT700T">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">Balance4RT700T</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">constant_conditions</span></em>, <em class="sig-param"><span class="n">margin_factor</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.Balance4RT700T" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="timbre.balance.BalanceAACCCDPT">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">BalanceAACCCDPT</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">constant_conditions</span></em>, <em class="sig-param"><span class="n">margin_factor</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.BalanceAACCCDPT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="timbre.balance.BalanceFPTEMP_11">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">BalanceFPTEMP_11</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">constant_conditions</span></em>, <em class="sig-param"><span class="n">margin_factor</span><span class="o">=</span><span class="default_value">0.95</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.BalanceFPTEMP_11" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="timbre.balance.BalancePFTANK2T">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">BalancePFTANK2T</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">constant_conditions</span></em>, <em class="sig-param"><span class="n">margin_factor</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.BalancePFTANK2T" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="timbre.balance.BalancePLINE03T">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">BalancePLINE03T</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">constant_conditions</span></em>, <em class="sig-param"><span class="n">margin_factor</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.BalancePLINE03T" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="timbre.balance.BalancePLINE04T">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">BalancePLINE04T</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">constant_conditions</span></em>, <em class="sig-param"><span class="n">margin_factor</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.BalancePLINE04T" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="timbre.balance.BalancePM1THV2T">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">BalancePM1THV2T</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">constant_conditions</span></em>, <em class="sig-param"><span class="n">margin_factor</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.BalancePM1THV2T" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="timbre.balance.BalancePM2THV1T">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">BalancePM2THV1T</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">model_spec</span></em>, <em class="sig-param"><span class="n">limit</span></em>, <em class="sig-param"><span class="n">constant_conditions</span></em>, <em class="sig-param"><span class="n">margin_factor</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.BalancePM2THV1T" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="timbre.balance.Composite">
+<em class="property">class </em><code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">Composite</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date</span></em>, <em class="sig-param"><span class="n">chips</span></em>, <em class="sig-param"><span class="n">roll</span></em>, <em class="sig-param"><span class="n">limits</span></em>, <em class="sig-param"><span class="n">max_dwell</span><span class="o">=</span><span class="default_value">100000</span></em>, <em class="sig-param"><span class="n">pitch_step</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">model_specs</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.Composite" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a composite maximum dwell estimate using all thermal models.</p>
+<p>This class can be used to automatically calculate the maximum best-case dwell duration possible for each model at
+each limited pitch (often heating) by considering the impact each model has on available cooling for all other
+models. This class also produces the associated offset (often cooling) dwell durations that can support the limited
+dwell durations produced for each model.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">timbre</span> <span class="kn">import</span> <span class="n">Composite</span><span class="p">,</span> <span class="n">f_to_c</span>
+
+<span class="n">limits</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;fptemp_11&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">112.0</span><span class="p">,</span>
+    <span class="s2">&quot;1dpamzt&quot;</span><span class="p">:</span> <span class="mf">37.5</span><span class="p">,</span>
+    <span class="s2">&quot;1deamzt&quot;</span><span class="p">:</span> <span class="mf">37.5</span><span class="p">,</span>
+    <span class="s2">&quot;1pdeaat&quot;</span><span class="p">:</span> <span class="mf">52.5</span><span class="p">,</span>
+    <span class="s2">&quot;aacccdpt&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">6.5</span><span class="p">,</span>
+    <span class="s2">&quot;4rt700t&quot;</span><span class="p">:</span> <span class="n">f_to_c</span><span class="p">(</span><span class="mf">100.0</span><span class="p">),</span>
+    <span class="s2">&quot;pftank2t&quot;</span><span class="p">:</span> <span class="n">f_to_c</span><span class="p">(</span><span class="mf">110.0</span><span class="p">),</span>
+    <span class="s2">&quot;pm1thv2t&quot;</span><span class="p">:</span> <span class="n">f_to_c</span><span class="p">(</span><span class="mf">210.0</span><span class="p">),</span>
+    <span class="s2">&quot;pm2thv1t&quot;</span><span class="p">:</span> <span class="n">f_to_c</span><span class="p">(</span><span class="mf">210.0</span><span class="p">),</span>
+    <span class="s2">&quot;pline03t&quot;</span><span class="p">:</span> <span class="n">f_to_c</span><span class="p">(</span><span class="mf">50.0</span><span class="p">),</span>
+    <span class="s2">&quot;pline04t&quot;</span><span class="p">:</span> <span class="n">f_to_c</span><span class="p">(</span><span class="mf">50.0</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="n">date</span> <span class="o">=</span> <span class="s2">&quot;2022:001:00:00:00&quot;</span>
+<span class="n">chips</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">roll</span> <span class="o">=</span> <span class="mi">0</span>
+
+<span class="n">timbre_object</span> <span class="o">=</span> <span class="n">Composite</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">chips</span><span class="p">,</span> <span class="n">roll</span><span class="p">,</span> <span class="n">limits</span><span class="p">,</span> <span class="n">max_dwell</span><span class="o">=</span><span class="mi">200000</span><span class="p">,</span> <span class="n">pitch_step</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt id="timbre.balance.Composite.balance_model">
+<code class="sig-name descname">balance_model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msid</span></em>, <em class="sig-param"><span class="n">model</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.Composite.balance_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the balanced limited and offset dwell curves for one model.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="timbre.balance.Composite.fill_composite">
+<code class="sig-name descname">fill_composite</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.Composite.fill_composite" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fill in the limited and offset dwell curves after mapping the fundamental dwell balance data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="timbre.balance.Composite.map_composite">
+<code class="sig-name descname">map_composite</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.Composite.map_composite" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use the anchor pitch values to map the fundamental dwell balance data.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="timbre.balance.get_limited_results">
+<code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">get_limited_results</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">results</span></em>, <em class="sig-param"><span class="n">anchor_offset_pitch</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.get_limited_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract the limited dwell time results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>results</strong> (<em>numpy.ndarray</em>) – Results calculated by <cite>generate_balanced_pitch_dwells</cite></p></li>
+<li><p><strong>anchor_offset_pitch</strong> (<em>int</em><em> or </em><em>float</em>) – offset pitch used to anchor the limited dwell curve</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Numpy array of limited dwell time results</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+<p>Note: The returned array is a structured numpy array with column names defined by Timbre and the input conditions.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="timbre.balance.get_offset_results">
+<code class="sig-prename descclassname">timbre.balance.</code><code class="sig-name descname">get_offset_results</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">results</span></em>, <em class="sig-param"><span class="n">anchor_limited_pitch</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.balance.get_offset_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract the offset dwell time results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>results</strong> (<em>numpy.ndarray</em>) – Results calculated by <cite>generate_balanced_pitch_dwells</cite></p></li>
+<li><p><strong>anchor_limited_pitch</strong> (<em>int</em><em> or </em><em>float</em>) – limited pitch used to anchor the offset dwell curve</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Numpy array of offset dwell time results</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+<p>Note: The returned array is a structured numpy array with column names defined by Timbre and the input conditions.</p>
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+<ul>
+<li><a class="reference internal" href="#">API documentation</a></li>
+</ul>
+
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="shorter_durations.html"
+                        title="previous chapter">Application of Timbre Estimates for Shorter Durations</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_documentation.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right">
+    <a href="_sources/api_documentation.rst.txt"
+       rel="nofollow">Page Source</a> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2020, Matthew Dahmer.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>
