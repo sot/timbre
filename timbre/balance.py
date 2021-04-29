@@ -511,10 +511,10 @@ class Composite(object):
 
         if rerun_tail is True or rerun_fwd is True:
             if rerun_tail is True:
-                print(f'Tail sun time available for cooling is less than originally assumed at the start of this' 
+                print('Tail sun time available for cooling is less than originally assumed at the start of this'
                       ' iteration, start new iteration.')
             if rerun_fwd is True:
-                print(f'Forward sun time available for cooling is less than originally assumed at the start of this' 
+                print('Forward sun time available for cooling is less than originally assumed at the start of this'
                       ' iteration, start new iteration.')
             self.map_composite()
 

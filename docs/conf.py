@@ -13,7 +13,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
-from timbre import __version__
+from timbre import __version__  # noqa
 
 # -- Project information -----------------------------------------------------
 
@@ -70,7 +70,7 @@ pygments_style = 'sphinx'
 # a list of builtin themes.
 html_theme = 'bootstrap-ska'
 html_theme_options = {
-    'logotext1': 'Ska!' ,
+    'logotext1': 'Ska!',
     'logotext2': 'timbre',
     'logotext3': '',
     'homepage_url': 'None Yet',
