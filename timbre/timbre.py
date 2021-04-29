@@ -6,9 +6,7 @@ from pathlib import Path
 from urllib.request import urlopen
 from urllib.error import URLError
 import json
-from copy import copy
 
-from h5py import string_dtype
 import numpy as np
 from scipy import interpolate
 
@@ -199,7 +197,8 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
 
     Example::
 
-        times = np.array(CxoTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00', 2019:003:00:00:00']).secs)
+        times = np.array(CxoTime(['2019:001:00:00:00', '2019:001:12:00:00', '2019:002:00:00:00',
+                                  '2019:003:00:00:00']).secs)
         pitch = np.array([150, 90, 156, 156])
         schedule = {'pitch': pitch}
         model_specs = load_model_specs()
@@ -262,8 +261,8 @@ def calc_binary_schedule(datesecs, state1, state2, t_dwell1, t_dwell2, msid, mod
         model results for this pseudo node, if it exists. This currently is not used but kept here as a placeholder.
     :type pseudo: str, optional
     :returns:
-        - **results** (:py:class:`dict`) - keys are node names (e.g. 'aacccdpt', 'aca0'), values are Xija model component
-            objects, this is the same object returned by `run_profile`
+        - **results** (:py:class:`dict`) - keys are node names (e.g. 'aacccdpt', 'aca0'), values are Xija model
+            component objects, this is the same object returned by `run_profile`
         - **times** (:py:class:`np.ndarray`) - time values input into Xija (may not exactly match Xija output)
         - **state_keys** (:py:class:`np.ndarray`) - defines state order, with elements matching the time array output
             (may not exactly match Xija output), this defines where to insert what state
@@ -546,7 +545,7 @@ def _refine_dwell2_time(limit_type, n_dwells, min_dwell, max_dwell, limit, opt_f
     # dwell2_range defines the possible dwell 2 guesses, first defined in log space
     dwell2_range = np.logspace(1.0e-6, 1, n_dwells, endpoint=True) / n_dwells
     dwell2_range = min_dwell + \
-                   (max_dwell - min_dwell) * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
+        (max_dwell - min_dwell) * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
 
     # Run the dwell1_state-dwell2_state schedule using the possible dwell 2 guesses
     output = np.array([opt_fun(t) for t in dwell2_range], dtype=[('duration2', np.float64), ('max', np.float64),
@@ -674,8 +673,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                        'fptemp': ['fptemp', '1cbat', 'sim_px'],
                        '1pdeaat': ['pin1at', ]}
 
-    base_dtype = [('msid', string_dtype('utf-8', 20)),
-                  ('date', string_dtype('utf-8', 8)),
+    base_dtype = [('msid', 'U20'),
+                  ('date', 'U8'),
                   ('datesecs', np.float64),
                   ('limit', np.float64),
                   ('t_dwell1', np.float64),

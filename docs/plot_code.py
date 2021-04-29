@@ -74,7 +74,7 @@ colors = px.colors.qualitative.D3
 def hex_to_rgba(hexstr, opacity):
     hexstr = hexstr.lstrip('#')
     hlen = len(hexstr)
-    rgba = [int(hexstr[i : i + int(hlen/3)], 16) for i in range(0, hlen, int(hlen/3))] + [opacity, ]
+    rgba = [int(hexstr[i: i + int(hlen/3)], 16) for i in range(0, hlen, int(hlen/3))] + [opacity, ]
     return tuple(rgba)
 
 
@@ -399,13 +399,17 @@ def gen_shading_annotation(xloc, yloc, dwell1_text, dwell2_text):
 
 def generate_example_balance_plot_dict(t_dwell1, t_dwell2, dwell1_state, dwell2_state):
 
+    text1 = f'Dwell #1 State<br>Pitch: {dwell1_state["pitch"]}<br><br>' + \
+            f'Dwell Time: {np.round(t_dwell1, 0):.0f}s<br>(Input)'
+    text2 = f'Dwell #2 State<br>Pitch: {dwell2_state["pitch"]}<br><br>' +\
+            f'Dwell Time: {np.round(t_dwell2, 0):.0f}s<br>(Calculated)'
+
     plot_object = {
         'data':  {
             'x': ['Hot Dwell', 'Cold Dwell'],
             'y': [np.round(t_dwell1, 1), t_dwell2, 1],
             'type': 'bar',
-            'text': [f'Dwell #1 State<br>Pitch: {dwell1_state["pitch"]}<br><br>Dwell Time: {np.round(t_dwell1, 0):.0f}s<br>(Input)',
-                     f'Dwell #2 State<br>Pitch: {dwell2_state["pitch"]}<br><br>Dwell Time: {np.round(t_dwell2, 0):.0f}s<br>(Calculated)'],
+            'text': [text1, text2],
             'textposition': 'inside',
             'textfont': {'family': font, 'size': 16, 'color': 'white'},
             'marker': {'color': [colors[3], colors[0]]}
@@ -428,7 +432,7 @@ def generate_example_balance_plot_dict(t_dwell1, t_dwell2, dwell1_state, dwell2_
                     },
                 'yaxis':
                     {
-                        'title':{'text': 'Dwell Time (Kiloseconds)','font': label_format},
+                        'title': {'text': 'Dwell Time (Kiloseconds)', 'font': label_format},
                         'tickfont': axis_format,
                         'linecolor': '#666666',
                         'linewidth': 1,
@@ -565,7 +569,7 @@ def generate_step_3_max_temp_plot_dict(output, title, t_dwell2, units='Celsius')
                 'type': 'scattergl',
                 'x': output['duration2'],
                 'y': output['max'],
-                'name': f'Dwell 2 Duration Guesses',
+                'name': 'Dwell 2 Duration Guesses',
                 'line': {'color': 'black', 'width': 2, 'shape': 'hv'},
                 'marker': {
                     'size': 16,
@@ -749,7 +753,7 @@ def generate_timber_output_plot_dict(plot_data, title, legend=True, legend_dict=
                     {
                         'title':
                             {
-                                'text': f'Dwell Time (s)',
+                                'text': 'Dwell Time (s)',
                                 'font': label_format
                             },
                         'tickfont': axis_format,
@@ -765,7 +769,7 @@ def generate_timber_output_plot_dict(plot_data, title, legend=True, legend_dict=
                     {
                         'title':
                             {
-                                'text': f'Pitch (Degrees)',
+                                'text': 'Pitch (Degrees)',
                                 'font': label_format
                             },
                         'domain': [0, 1],
@@ -1213,7 +1217,7 @@ def generate_limited_offset_results_plot_data(limited_data, offset_data):
             'type': 'scattergl',
             'x': limited_data.index,
             'y': limited_data.min(axis=1),
-            'name': f'Composite Dwell Limit',
+            'name': 'Composite Dwell Limit',
             'mode': 'lines',
             'line': {
                 'color': '#aaaaaa',
@@ -1284,7 +1288,7 @@ def generate_limited_offset_results_timbre_plot(plot_data, title, y_max=100000):
                     {
                         'title':
                             {
-                                'text': f'Dwell Duration',
+                                'text': 'Dwell Duration',
                                 'font': label_format
                             },
                         'tickfont': axis_format,
@@ -1302,7 +1306,7 @@ def generate_limited_offset_results_timbre_plot(plot_data, title, y_max=100000):
                     {
                         'title':
                             {
-                                'text': f'Pitch',
+                                'text': 'Pitch',
                                 'font': label_format
                             },
                         'domain': [0, 1],
@@ -1374,7 +1378,7 @@ def visualize_final_dwell_limits(timbre_object, max_plot_limit=100000):
         .apply(mark_limiting_factor, axis=None) \
         .set_precision(0) \
         .bar(subset=columns+['Max Dwell', ], color=hex_to_rgba_str(colors[3], 0.25), vmin=0, vmax=max_plot_limit) \
-        .applymap(color_nan_gray, subset=columns+['Max Dwell',])
+        .applymap(color_nan_gray, subset=columns+['Max Dwell', ])
     return final_formatted_limited_results
 
 
@@ -1411,4 +1415,3 @@ def visualize_final_dwell_offsets(timbre_object, max_plot_limit=100000, tol=100)
         .apply(mark_achievable_cooling, axis=None) \
 
     return final_formatted_results
-
