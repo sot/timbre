@@ -33,11 +33,11 @@ these past observing profiles to characterize future capability, which had worke
 
 This documentation will first cover how to run Timbre to calculate the estimated dwell time to balance two known
 configurations (e.g. pitch, roll, fep_count, etc.) and a known initial dwell time. After covering very basic usage,
-further examples will cover how to run multiple simulations, and eventually how to use this data to characterize dwell
-capability over a range of inputs.
+further examples will show how to use this data to characterize dwell capability and how to use the interaction of all
+thermal models to generate composite maximum dwell estimates.
 
-Notebook-Produced Documentation
-===============================
+Documentation
+=============
 
 .. toctree::
    :maxdepth: 2

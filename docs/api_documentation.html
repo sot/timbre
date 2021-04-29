@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API documentation &#8212; Timbre 0.13 documentation</title>
+    <title>API documentation &#8212; Timbre 1.0 documentation</title>
     <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
@@ -57,7 +57,7 @@
 	
       </li>
       <li>
-	<a href="index.html">Timbre 0.13 documentation</a>
+	<a href="index.html">Timbre 1.0 documentation</a>
 	 &#187;
       </li>
       
@@ -118,7 +118,7 @@ model results for this pseudo node, if it exists. This currently is not used but
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><ul class="simple">
 <li><dl class="simple">
-<dt><strong>results</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>) - keys are node names (e.g. ‘aacccdpt’, ‘aca0’), values are Xija model component</dt><dd><p>objects, this is the same object returned by <cite>run_profile</cite></p>
+<dt><strong>results</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>) - keys are node names (e.g. ‘aacccdpt’, ‘aca0’), values are Xija model</dt><dd><p>component objects, this is the same object returned by <cite>run_profile</cite></p>
 </dd>
 </dl>
 </li>
@@ -290,7 +290,8 @@ wishes to retrieve model results for this pseudo node, if it exists</p></li>
 </dd>
 </dl>
 <p>Example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">CxoTime</span><span class="p">([</span><span class="s1">&#39;2019:001:00:00:00&#39;</span><span class="p">,</span> <span class="s1">&#39;2019:001:12:00:00&#39;</span><span class="p">,</span> <span class="s1">&#39;2019:002:00:00:00&#39;</span><span class="p">,</span> <span class="mi">2019</span><span class="p">:</span><span class="mi">003</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mi">00</span><span class="s1">&#39;]).secs)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">CxoTime</span><span class="p">([</span><span class="s1">&#39;2019:001:00:00:00&#39;</span><span class="p">,</span> <span class="s1">&#39;2019:001:12:00:00&#39;</span><span class="p">,</span> <span class="s1">&#39;2019:002:00:00:00&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;2019:003:00:00:00&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">secs</span><span class="p">)</span>
 <span class="n">pitch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">150</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span> <span class="mi">156</span><span class="p">,</span> <span class="mi">156</span><span class="p">])</span>
 <span class="n">schedule</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;pitch&#39;</span><span class="p">:</span> <span class="n">pitch</span><span class="p">}</span>
 <span class="n">model_specs</span> <span class="o">=</span> <span class="n">load_model_specs</span><span class="p">()</span>
