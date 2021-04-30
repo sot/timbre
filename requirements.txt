@@ -1,0 +1,10 @@
+timbre~=1.0
+numpy~=1.18.5
+plotly~=4.14.3
+pandas~=1.0.5
+cxotime~=3.2.5
+xija~=4.21.1
+scipy~=1.5.0
+ska_helpers~=0.5.0
+setuptools~=49.2.0
+testr~=4.6.0
