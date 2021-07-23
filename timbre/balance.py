@@ -369,7 +369,8 @@ class Composite(object):
         self.max_dwell = max_dwell
 
         if model_specs is None:
-            self.model_specs = load_model_specs()
+            model_specs = load_model_specs()
+        self.model_specs = model_specs
 
         self.anchors = {
             '1dpamzt': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
