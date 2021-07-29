@@ -4,10 +4,9 @@ from hashlib import md5
 from json import loads as json_loads
 from pathlib import Path
 from urllib.request import urlopen
-from urllib.error import URLError
 from urllib.parse import urljoin
 import json
-from git import Repo, InvalidGitRepositoryError
+from git import Repo
 
 import numpy as np
 from scipy import interpolate
@@ -30,8 +29,10 @@ non_state_names = {'aacccdpt': ['aca0', ],
 
 
 def get_github_chandra_models_version_info():
-    """
+    """ Download a list of all tags and branches, along with associated information.
 
+    :return: Dictionrary of all tags and branches, along with associated information.
+    :rtype: dict
     """
     with urlopen('https://api.github.com/repos/sot/chandra_models/tags') as url:
         response = url.read()
@@ -47,11 +48,13 @@ def get_github_chandra_models_version_info():
 
 
 def load_github_model_specs(version='master'):
-    """ Load Xija model parameters for all available models.
+    """ Load Xija all model parameters for a specified version from https://github.com/sot/chandra_models.
 
-    :param repository_location: If a url, this is the domain
+    :param version: tag or branch to use
+    :type version: str
 
-    :return: A dictionary containing the model specifications for all available Xija models
+    :return: A dictionary containing the model specifications for all available Xija models for the chandra_models
+        version specified
     :rtype: dict
 
     Note:
@@ -111,7 +114,13 @@ def load_github_model_specs(version='master'):
 def load_model_specs(version=None, local_repository_location=None):
     """ Load Xija model parameters for all available models.
 
-    :return: A dictionary containing the model specifications for all available Xija models
+    :param version: tag or branch to use
+    :type version: str
+    :param local_repository_location: location of chandra_models repository, defaults to `get_model_spec.REPO_PATH`
+    :type local_repository_location: str
+
+    :return: A dictionary containing the model specifications for all available Xija models, along with latest commit
+        sha for version specified (or existing branch/tag), branch/tag, and repository state
     :rtype: dict
 
     Note:
@@ -121,10 +130,10 @@ def load_model_specs(version=None, local_repository_location=None):
     def get_local_git_version_info(repo):
         """ Get latest git commit hash for current branch.
 
-        :param repo: Directory of git repository
+        :param repo: gitpython Repo object for repository
         :type repo: git.repo.base.Repo
         :return: Latest commit hash, branch/tag, repository state
-        :return: dict or None
+        :return: dict
         """
 
         hexsha, version = repo.commit().name_rev.split()
@@ -136,8 +145,10 @@ def load_model_specs(version=None, local_repository_location=None):
 
         :param model_location: Relative location of model file, starting from the chandra_models root repository
             location
+        :type model_locations: str
 
         :return: JSON file stored as a dictionary, md5 hash of file
+        :rtype: tuple
         """
 
         with open(Path.joinpath(local_repository_location, Path(model_location))) as fid:
