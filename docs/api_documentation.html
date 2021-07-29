@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API documentation &#8212; Timbre 1.0 documentation</title>
+    <title>API documentation &#8212; Timbre 1.2.dev0+gbcf8074.d20210729 documentation</title>
     <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
@@ -57,7 +57,7 @@
 	
       </li>
       <li>
-	<a href="index.html">Timbre 1.0 documentation</a>
+	<a href="index.html">Timbre 1.2.dev0+gbcf8074.d20210729 documentation</a>
 	 &#187;
       </li>
       
@@ -234,6 +234,20 @@ model results for this pseudo node, if it exists. This currently is not used but
 </dd></dl>
 
 <dl class="py function">
+<dt id="timbre.timbre.get_github_chandra_models_version_info">
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">get_github_chandra_models_version_info</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.get_github_chandra_models_version_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Download a list of all tags and branches, along with associated information.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Dictionrary of all tags and branches, along with associated information.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt id="timbre.timbre.get_local_model">
 <code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">get_local_model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.get_local_model" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load parameters for a single Xija model.</p>
@@ -251,15 +265,42 @@ model results for this pseudo node, if it exists. This currently is not used but
 </dd></dl>
 
 <dl class="py function">
+<dt id="timbre.timbre.load_github_model_specs">
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">load_github_model_specs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">version</span><span class="o">=</span><span class="default_value">'master'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.load_github_model_specs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load Xija all model parameters for a specified version from <a class="reference external" href="https://github.com/sot/chandra_models">https://github.com/sot/chandra_models</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>version</strong> (<em>str</em>) – tag or branch to use</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A dictionary containing the model specifications for all available Xija models for the chandra_models
+version specified</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+<p>Note:
+This will need to be updated as new models are approved or existing models are renamed.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt id="timbre.timbre.load_model_specs">
-<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">load_model_specs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.load_model_specs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">timbre.timbre.</code><code class="sig-name descname">load_model_specs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">version</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">local_repository_location</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#timbre.timbre.load_model_specs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load Xija model parameters for all available models.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>A dictionary containing the model specifications for all available Xija models</p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>version</strong> (<em>str</em>) – tag or branch to use</p></li>
+<li><p><strong>local_repository_location</strong> (<em>str</em>) – location of chandra_models repository, defaults to <cite>get_model_spec.REPO_PATH</cite></p></li>
+</ul>
 </dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>dict</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A dictionary containing the model specifications for all available Xija models, along with latest commit
+sha for version specified (or existing branch/tag), branch/tag, and repository state</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
 </dd>
 </dl>
 <p>Note:
