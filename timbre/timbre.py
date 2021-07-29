@@ -5,13 +5,16 @@ from json import loads as json_loads
 from pathlib import Path
 from urllib.request import urlopen
 from urllib.error import URLError
+from urllib.parse import urljoin
 import json
+from git import Repo, InvalidGitRepositoryError
 
 import numpy as np
 from scipy import interpolate
 
 from cxotime import CxoTime
 import xija
+from xija import get_model_spec
 
 non_state_names = {'aacccdpt': ['aca0', ],
                    'pftank2t': ['pf0tank2t', ],
@@ -26,7 +29,86 @@ non_state_names = {'aacccdpt': ['aca0', ],
                    '1pdeaat': ['pin1at', ]}
 
 
-def load_model_specs():
+def get_github_chandra_models_version_info():
+    """
+
+    """
+    with urlopen('https://api.github.com/repos/sot/chandra_models/tags') as url:
+        response = url.read()
+        tags = json.loads(response.decode('utf-8'))
+
+    with urlopen('https://api.github.com/repos/sot/chandra_models/branches') as url:
+        response = url.read()
+        branches = json.loads(response.decode('utf-8'))
+
+    all_versions_info = {t["name"]: t for t in tags}
+    all_versions_info.update({b["name"]: b for b in branches})
+    return all_versions_info
+
+
+def load_github_model_specs(version='master'):
+    """ Load Xija model parameters for all available models.
+
+    :param repository_location: If a url, this is the domain
+
+    :return: A dictionary containing the model specifications for all available Xija models
+    :rtype: dict
+
+    Note:
+    This will need to be updated as new models are approved or existing models are renamed.
+    """
+
+    def join_url_parts(repository_root, url_parts):
+        return urljoin(repository_root, '/'.join(url_parts).replace('///', '/').replace('//', '/'))
+
+    def get_model(model_location):
+        """ Load parameters for a single Xija model.
+
+        :param model_location: Relative location of model file, starting from the chandra_models root repository
+            location
+
+        :return: JSON file stored as a dictionary, md5 hash of file
+        """
+
+        repository_url = 'https://raw.githubusercontent.com/sot/chandra_models/'
+        model_spec_url = join_url_parts(repository_url,  [version, model_location])
+
+        with urlopen(model_spec_url) as url:
+            response = url.read()
+            f = response.decode('utf-8')
+
+        md5_hash = md5(f.encode('utf-8')).hexdigest()
+
+        return json_loads(f), md5_hash
+
+    model_locations = {
+        'aacccdpt': '/chandra_models/xija/aca/aca_spec.json',
+        '1deamzt': '/chandra_models/xija/dea/dea_spec.json',
+        '1dpamzt': '/chandra_models/xija/dpa/dpa_spec.json',
+        'fptemp': '/chandra_models/xija/acisfp/acisfp_spec.json',
+        '1pdeaat': '/chandra_models/xija/psmc/psmc_spec.json',
+        'pftank2t': '/chandra_models/xija/pftank2t/pftank2t_spec.json',
+        '4rt700t': '/chandra_models/xija/fwdblkhd/4rt700t_spec.json',
+        'pline03t': '/chandra_models/xija/pline/pline03t_model_spec.json',
+        'pline04t': '/chandra_models/xija/pline/pline04t_model_spec.json',
+        'pm1thv2t': '/chandra_models/xija/mups_valve/pm1thv2t_spec.json',
+        'pm2thv1t': '/chandra_models/xija/mups_valve/pm2thv1t_spec.json',
+    }
+
+    all_versions_info = get_github_chandra_models_version_info()
+
+    model_specs = {'sha': all_versions_info[version]['commmit']['sha'], 'version_info': all_versions_info[version],
+                   'version': version}
+
+    for msid, path in model_locations.items():
+        model_specs[msid], model_specs[msid + '_md5'] = get_model(path)
+    model_specs['fptemp_11'] = model_specs['fptemp']  # For backwards compatibility
+    model_specs['fptemp_11_md5'] = model_specs['fptemp_md5']  # For backwards compatibility
+
+    return model_specs
+
+
+def load_model_specs(version=None, local_repository_location=None):
     """ Load Xija model parameters for all available models.
 
     :return: A dictionary containing the model specifications for all available Xija models
@@ -36,54 +118,62 @@ def load_model_specs():
     This will need to be updated as new models are approved or existing models are renamed.
     """
 
-    def get_model(local_file_path, internet):
+    def get_local_git_version_info(repo):
+        """ Get latest git commit hash for current branch.
+
+        :param repo: Directory of git repository
+        :type repo: git.repo.base.Repo
+        :return: Latest commit hash, branch/tag, repository state
+        :return: dict or None
+        """
+
+        hexsha, version = repo.commit().name_rev.split()
+        modified = repo.is_dirty()
+        return {'sha': hexsha, 'version': version, 'modified': modified}
+
+    def get_model(model_location):
         """ Load parameters for a single Xija model.
 
-        :param local_file_path: Relative location of model file, starting from the
-            chandra_models/chandra_models/xija/directory
-        :param internet:: Availability of an internet connection, for accessing github.com
+        :param model_location: Relative location of model file, starting from the chandra_models root repository
+            location
 
         :return: JSON file stored as a dictionary, md5 hash of file
         """
 
-        url = 'https://raw.githubusercontent.com/sot/chandra_models/master/chandra_models/xija/'
-        local_dir = '/AXAFLIB/chandra_models/chandra_models/xija/'
-
-        if internet:
-            model_spec_url = url + local_file_path
-            with urlopen(model_spec_url) as url:
-                response = url.read()
-                f = response.decode('utf-8')
-        else:
-            with open(Path('~' + local_dir + local_file_path).expanduser()) as fid:
-                f = fid.read()
-
+        with open(Path.joinpath(local_repository_location, Path(model_location))) as fid:
+            f = fid.read()
         md5_hash = md5(f.encode('utf-8')).hexdigest()
-
         return json_loads(f), md5_hash
 
-    model_specs = {}
+    model_locations = {
+        'aacccdpt': 'chandra_models/xija/aca/aca_spec.json',
+        '1deamzt': 'chandra_models/xija/dea/dea_spec.json',
+        '1dpamzt': 'chandra_models/xija/dpa/dpa_spec.json',
+        'fptemp': 'chandra_models/xija/acisfp/acisfp_spec.json',
+        '1pdeaat': 'chandra_models/xija/psmc/psmc_spec.json',
+        'pftank2t': 'chandra_models/xija/pftank2t/pftank2t_spec.json',
+        '4rt700t': 'chandra_models/xija/fwdblkhd/4rt700t_spec.json',
+        'pline03t': 'chandra_models/xija/pline/pline03t_model_spec.json',
+        'pline04t': 'chandra_models/xija/pline/pline04t_model_spec.json',
+        'pm1thv2t': 'chandra_models/xija/mups_valve/pm1thv2t_spec.json',
+        'pm2thv1t': 'chandra_models/xija/mups_valve/pm2thv1t_spec.json',
+    }
 
-    internet = True
-    try:
-        _ = urlopen('https://github.com')
-    except URLError:
-        internet = False
+    if local_repository_location is None:
+        local_repository_location = get_model_spec.REPO_PATH
+    else:
+        local_repository_location = Path(local_repository_location).expanduser()
 
-    model_specs['aacccdpt'], model_specs['aacccdpt_hash'] = get_model('aca/aca_spec.json', internet)
-    model_specs['1deamzt'], model_specs['1deamzt_hash'] = get_model('dea/dea_spec.json', internet)
-    model_specs['1dpamzt'], model_specs['1dpamzt_hash'] = get_model('dpa/dpa_spec.json', internet)
-    model_specs['fptemp'], model_specs['fptemp_hash'] = get_model('acisfp/acisfp_spec.json', internet)
-    model_specs['1pdeaat'], model_specs['1pdeaat_hash'] = get_model('psmc/psmc_spec.json', internet)
-    model_specs['pftank2t'], model_specs['pftank2t_hash'] = get_model('pftank2t/pftank2t_spec.json', internet)
-    model_specs['tcylaft6'], model_specs['tcylaft6_hash'] = get_model('tcylaft6/tcylaft6_spec.json', internet)
-    model_specs['4rt700t'], model_specs['4rt700t_hash'] = get_model('fwdblkhd/4rt700t_spec.json', internet)
-    model_specs['pline03t'], model_specs['pline03t_hash'] = get_model('pline/pline03t_model_spec.json', internet)
-    model_specs['pline04t'], model_specs['pline04t_hash'] = get_model('pline/pline04t_model_spec.json', internet)
-    model_specs['pm1thv2t'], model_specs['pm1thv2t_hash'] = get_model('mups_valve/pm1thv2t_spec.json', internet)
-    model_specs['pm2thv1t'], model_specs['pm2thv1t_hash'] = get_model('mups_valve/pm2thv1t_spec.json', internet)
+    with get_model_spec.temp_directory() as repo_path_local:
+        repo = Repo.clone_from(local_repository_location, repo_path_local)
+        if version is not None:
+            _ = repo.git.checkout(version)
+        model_specs = get_local_git_version_info(repo)
 
-    model_specs['fptemp_11'] = model_specs['fptemp']  # For backwards compatibility
+        for msid, path in model_locations.items():
+            model_specs[msid], model_specs[msid + '_md5'] = get_model(path)
+        model_specs['fptemp_11'] = model_specs['fptemp']  # For backwards compatibility
+        model_specs['fptemp_11_md5'] = model_specs['fptemp_md5']  # For backwards compatibility
 
     return model_specs
 
