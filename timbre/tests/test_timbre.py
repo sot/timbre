@@ -34,13 +34,29 @@ def test_f_to_c():
     assert c == 100.0
 
 
-# def test_get_full_dtype():
-#     """ Test boilerplate dtype generation.
-#     """
-#
-#     d = timbre.get_full_dtype({})
-#
-#     assert isinstance(np.dtype(d), np.dtype)
+def test_load_model_specs():
+    """ Test loading model specs in different ways.
+
+    This assumes that there is a chandra models directory at the path stored in `get_model_spec.REPO_PATH`.
+    """
+
+    model_specs = timbre.load_model_specs()
+
+    keys = model_specs.keys()
+    assert 'aacccdpt' in keys
+    assert len(str(model_specs['aacccdpt'])) > 100
+    assert 'aacccdpt_md5' in keys
+    assert len(str(model_specs['aacccdpt_md5'])) == 32
+    assert 'sha' in keys
+    assert len(str(model_specs['sha'])) == 40
+    assert 'version' in keys
+    assert 'modified' in keys
+
+    version = model_specs['version']
+    sha = model_specs['sha']
+
+    # Print for use with the -s pytest flag, when desired.
+    print(f'Selected Chandra Models version {version}, with a latest commit sha of {sha}.')
 
 
 def test_setup_model():
