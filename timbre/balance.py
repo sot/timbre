@@ -374,7 +374,7 @@ class Composite(object):
             model_specs = load_model_specs()
         self.model_specs = model_specs
 
-        if anchors is not None:
+        if anchors is None:
             self.anchors = {
                 '1dpamzt': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
                 '1deamzt': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
