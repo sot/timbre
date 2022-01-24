@@ -100,7 +100,7 @@ def load_github_model_specs(version='master'):
 
     all_versions_info = get_github_chandra_models_version_info()
 
-    model_specs = {'sha': all_versions_info[version]['commmit']['sha'], 'version_info': all_versions_info[version],
+    model_specs = {'sha': all_versions_info[version]['commit']['sha'], 'version_info': all_versions_info[version],
                    'version': version}
 
     for msid, path in model_locations.items():

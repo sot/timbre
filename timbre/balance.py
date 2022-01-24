@@ -342,7 +342,7 @@ class Composite(object):
 
     """
 
-    def __init__(self, date, chips, roll, limits, max_dwell=100000, pitch_step=1, model_specs=None):
+    def __init__(self, date, chips, roll, limits, max_dwell=100000, pitch_step=1, model_specs=None, anchors=None):
         """ Run a Xija model for a given time and state profile.
 
         :param date: Date used for the dwell balance analysis
@@ -358,6 +358,8 @@ class Composite(object):
         :param model_specs: Dictionary of model parameters, if None then the `timbre.load_model_specs` method will be
             used to load all model specs.
         :type model_specs: dict or None, optional
+        :param anchors: Dictionary of limited and offset anchor pitch values for each MSID.
+        :type anchors" dict or None, optional
 
         """
 
@@ -372,19 +374,22 @@ class Composite(object):
             model_specs = load_model_specs()
         self.model_specs = model_specs
 
-        self.anchors = {
-            '1dpamzt': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
-            '1deamzt': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
-            'fptemp_11': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
-            '1pdeaat': {'anchor_limited_pitch': 45, 'anchor_offset_pitch': 160},
-            'aacccdpt': {'anchor_limited_pitch': 90, 'anchor_offset_pitch': 160},
-            'pm1thv2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
-            'pm2thv1t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
-            '4rt700t': {'anchor_limited_pitch': 90, 'anchor_offset_pitch': 160},
-            'pftank2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
-            'pline03t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 60},
-            'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 60},
-        }
+        if anchors is None:
+            self.anchors = {
+                '1dpamzt': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
+                '1deamzt': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
+                'fptemp_11': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
+                '1pdeaat': {'anchor_limited_pitch': 45, 'anchor_offset_pitch': 160},
+                'aacccdpt': {'anchor_limited_pitch': 90, 'anchor_offset_pitch': 160},
+                'pm1thv2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
+                'pm2thv1t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
+                '4rt700t': {'anchor_limited_pitch': 90, 'anchor_offset_pitch': 160},
+                'pftank2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
+                'pline03t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 60},
+                'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 60},
+            }
+        else:
+            self.anchors = anchors
 
         # Start with only the pitch values used to map out dwell capability (from the "anchors" defined above).
         self.pitch_range = self._get_required_pitch_values()
@@ -401,15 +406,34 @@ class Composite(object):
         self.dwell_limits = pd.Series(index=range(45, 181, pitch_step))
         self.dwell_limits.loc[:] = self.max_dwell
 
-        acis_const = {'roll': self.roll, 'fep_count': self.chips, 'ccd_count': self.chips, 'clocking': True,
-                      'vid_board': True, 'sim_z': 100000}
-        psmc_const = {'roll': roll, 'fep_count': chips, 'ccd_count': chips, 'clocking': True, 'vid_board': True,
-                      'sim_z': 100000, 'dh_heater': False}
+        acis_on_const = {'roll': roll, 'fep_count': chips, 'ccd_count': chips, 'clocking': True, 'vid_board': True,
+                         'sim_z': 100000}
+        acis_off_stowed_const = {'roll': roll, 'fep_count': 0, 'ccd_count': 0, 'clocking': False, 'vid_board': False,
+                                 'sim_z': -99616}
+        psmc_on_const = {'roll': roll, 'fep_count': chips, 'ccd_count': chips, 'clocking': True, 'vid_board': True,
+                         'sim_z': 100000, 'dh_heater': False}
+        psmc_off_stowed_const = {'roll': roll, 'fep_count': 0, 'ccd_count': 0, 'clocking': False, 'vid_board': False,
+                                 'sim_z': -99616, 'dh_heater': False}
+
         sc_const = {'roll': roll}
-        self.dpa = Balance1DPAMZT(self.date, self.model_specs['1dpamzt'], self.limits['1dpamzt'], acis_const)
-        self.dea = Balance1DEAMZT(self.date, self.model_specs['1deamzt'], self.limits['1deamzt'], acis_const)
-        self.acisfp = BalanceFPTEMP_11(self.date, self.model_specs['fptemp_11'], self.limits['fptemp_11'], acis_const)
-        self.psmc = Balance1PDEAAT(self.date, self.model_specs['1pdeaat'], self.limits['1pdeaat'], psmc_const)
+
+        if chips > 0:
+            self.dpa = Balance1DPAMZT(self.date, self.model_specs['1dpamzt'], self.limits['1dpamzt'], acis_on_const)
+            self.dea = Balance1DEAMZT(self.date, self.model_specs['1deamzt'], self.limits['1deamzt'], acis_on_const)
+            self.acisfp = BalanceFPTEMP_11(self.date, self.model_specs['fptemp_11'], self.limits['fptemp_11'],
+                                           acis_on_const)
+            self.psmc = Balance1PDEAAT(self.date, self.model_specs['1pdeaat'], self.limits['1pdeaat'], psmc_on_const)
+
+        else:
+            self.dpa = Balance1DPAMZT(self.date, self.model_specs['1dpamzt'], self.limits['1dpamzt'],
+                                      acis_off_stowed_const)
+            self.dea = Balance1DEAMZT(self.date, self.model_specs['1deamzt'], self.limits['1deamzt'],
+                                      acis_off_stowed_const)
+            self.acisfp = BalanceFPTEMP_11(self.date, self.model_specs['fptemp_11'], self.limits['fptemp_11'],
+                                           acis_off_stowed_const)
+            self.psmc = Balance1PDEAAT(self.date, self.model_specs['1pdeaat'], self.limits['1pdeaat'],
+                                       psmc_off_stowed_const)
+
         self.aca = BalanceAACCCDPT(self.date, self.model_specs['aacccdpt'], self.limits['aacccdpt'], {})
         self.oba = Balance4RT700T(self.date, self.model_specs['4rt700t'], self.limits['4rt700t'], {})
         self.mups1b = BalancePM1THV2T(self.date, self.model_specs['pm1thv2t'], self.limits['pm1thv2t'], sc_const)
