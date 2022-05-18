@@ -376,17 +376,17 @@ class Composite(object):
 
         if anchors is None:
             self.anchors = {
-                '1dpamzt': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
-                '1deamzt': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
-                'fptemp_11': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
+                '1dpamzt': {'anchor_limited_pitch': 155, 'anchor_offset_pitch': 70},
+                '1deamzt': {'anchor_limited_pitch': 155, 'anchor_offset_pitch': 70},
+                'fptemp_11': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 70},
                 '1pdeaat': {'anchor_limited_pitch': 45, 'anchor_offset_pitch': 160},
                 'aacccdpt': {'anchor_limited_pitch': 90, 'anchor_offset_pitch': 160},
                 'pm1thv2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
                 'pm2thv1t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
                 '4rt700t': {'anchor_limited_pitch': 90, 'anchor_offset_pitch': 160},
                 'pftank2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
-                'pline03t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 60},
-                'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 60},
+                'pline03t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
+                'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
             }
         else:
             self.anchors = anchors
