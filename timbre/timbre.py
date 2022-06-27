@@ -7,7 +7,6 @@ from urllib.request import urlopen
 from urllib.parse import urljoin
 import json
 from git import Repo
-
 import numpy as np
 from scipy import interpolate
 
@@ -88,7 +87,7 @@ def load_github_model_specs(version='master'):
         'aacccdpt': '/chandra_models/xija/aca/aca_spec.json',
         '1deamzt': '/chandra_models/xija/dea/dea_spec.json',
         '1dpamzt': '/chandra_models/xija/dpa/dpa_spec.json',
-        'fptemp': '/chandra_models/xija/acisfp/acisfp_spec.json',
+        'fptemp': '/chandra_models/xija/acisfp/acisfp_spec_matlab.json',
         '1pdeaat': '/chandra_models/xija/psmc/psmc_spec.json',
         'pftank2t': '/chandra_models/xija/pftank2t/pftank2t_spec.json',
         '4rt700t': '/chandra_models/xija/fwdblkhd/4rt700t_spec.json',
@@ -160,7 +159,7 @@ def load_model_specs(version=None, local_repository_location=None):
         'aacccdpt': 'chandra_models/xija/aca/aca_spec.json',
         '1deamzt': 'chandra_models/xija/dea/dea_spec.json',
         '1dpamzt': 'chandra_models/xija/dpa/dpa_spec.json',
-        'fptemp': 'chandra_models/xija/acisfp/acisfp_spec.json',
+        'fptemp': 'chandra_models/xija/acisfp/acisfp_spec_matlab.json',
         '1pdeaat': 'chandra_models/xija/psmc/psmc_spec.json',
         'pftank2t': 'chandra_models/xija/pftank2t/pftank2t_spec.json',
         '4rt700t': 'chandra_models/xija/fwdblkhd/4rt700t_spec.json',
