@@ -135,7 +135,12 @@ def _worker(arg, q):
     text2 = f'{num_sets}:\n{input_set}\nFor {date} and Chip Numbers {chips}\n\n'
     print(text1 + text2)
 
-    res = res.to_csv(header=None)
+    if n == 0:
+        header = True
+    else:
+        header = False
+
+    res = res.to_csv(index=False, header=header)
     q.put(res)
 
     return res
