@@ -73,7 +73,7 @@ def load_github_model_specs(version='master'):
         """
 
         repository_url = 'https://raw.githubusercontent.com/sot/chandra_models/'
-        model_spec_url = join_url_parts(repository_url,  [version, model_location])
+        model_spec_url = join_url_parts(repository_url, [version, model_location])
 
         with urlopen(model_spec_url) as url:
             response = url.read()
@@ -503,14 +503,14 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
                'hotter_state': np.nan, 'colder_state': np.nan}
 
     # Ensure t_dwell1 is a float, may not be necessary anymore
-    t_dwell1 = np.float(t_dwell1)
+    t_dwell1 = float(t_dwell1)
 
     opt_fun = create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_spec, init, t_backoff,
                              duration)
 
     # First just check the bounds to avoid unnecessary runs of `opt_fun`
     output = np.array([opt_fun(t) for t in [min_dwell, max_dwell]],
-                      dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64), ('min', np.float64)])
+                      dtype=[('duration2', float64), ('max', float64), ('mean', float64), ('min', float64)])
 
     if 'max' in limit_type:
 
@@ -645,11 +645,11 @@ def _refine_dwell2_time(limit_type, n_dwells, min_dwell, max_dwell, limit, opt_f
     # dwell2_range defines the possible dwell 2 guesses, first defined in log space
     dwell2_range = np.logspace(1.0e-6, 1, n_dwells, endpoint=True) / n_dwells
     dwell2_range = min_dwell + \
-        (max_dwell - min_dwell) * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
+                   (max_dwell - min_dwell) * (dwell2_range - dwell2_range[0]) / (dwell2_range[-1] - dwell2_range[0])
 
     # Run the dwell1_state-dwell2_state schedule using the possible dwell 2 guesses
-    output = np.array([opt_fun(t) for t in dwell2_range], dtype=[('duration2', np.float64), ('max', np.float64),
-                                                                 ('mean', np.float64), ('min', np.float64)])
+    output = np.array([opt_fun(t) for t in dwell2_range], dtype=[('duration2', float64), ('max', float64),
+                                                                 ('mean', float64), ('min', float64)])
 
     # Ensure the results are sorted. Although dwell2_range will be sorted, the output may not when two or more dwell
     # times are close, where temperature oscillations from instabilities in the Xija model can cause the results to lose
@@ -672,8 +672,8 @@ def _refine_dwell2_time(limit_type, n_dwells, min_dwell, max_dwell, limit, opt_f
         t_bound = (output_sorted['duration2'][ind - 1], output_sorted['duration2'][ind])
         dwell2_range = np.linspace(np.min(t_bound), np.max(t_bound), n_dwells, endpoint=True)
         output = np.array([opt_fun(t) for t in dwell2_range],
-                          dtype=[('duration2', np.float64), ('max', np.float64), ('mean', np.float64),
-                                 ('min', np.float64)])
+                          dtype=[('duration2', float64), ('max', float64), ('mean', float64),
+                                 ('min', float64)])
 
         # In rare conditions where all 'x' values are very close and 'wobble' a bit, it may not be sorted. If it
         # is not sorted, the quadratic method will result in an error. The linear method is more tolerant of this
@@ -755,7 +755,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                        ({'pitch': 75}, {'pitch': 130}),
                        ({'pitch': 170}, {'pitch': 90}),
                        ({'pitch': 90}, {'pitch': 170}))
-        state_pair_dtype = {'pitch', np.float64}
+        state_pair_dtype = {'pitch', float64}
 
         results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs,
             state_pair_dtype)
@@ -775,19 +775,19 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
 
     base_dtype = [('msid', 'U20'),
                   ('date', 'U8'),
-                  ('datesecs', np.float64),
-                  ('limit', np.float64),
-                  ('t_dwell1', np.float64),
-                  ('t_dwell2', np.float64),
-                  ('min_temp', np.float64),
-                  ('mean_temp', np.float64),
-                  ('max_temp', np.float64),
-                  ('min_pseudo', np.float64),
-                  ('mean_pseudo', np.float64),
-                  ('max_pseudo', np.float64),
-                  ('converged', np.bool),
-                  ('unconverged_hot', np.bool),
-                  ('unconverged_cold', np.bool),
+                  ('datesecs', float64),
+                  ('limit', float64),
+                  ('t_dwell1', float64),
+                  ('t_dwell2', float64),
+                  ('min_temp', float64),
+                  ('mean_temp', float64),
+                  ('max_temp', float64),
+                  ('min_pseudo', float64),
+                  ('mean_pseudo', float64),
+                  ('max_pseudo', float64),
+                  ('converged', bool),
+                  ('unconverged_hot', bool),
+                  ('unconverged_cold', bool),
                   ('hotter_state', np.int8),
                   ('colder_state', np.int8)]
 
@@ -799,7 +799,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
 
     results = []
 
-    num = np.float(len(state_pairs))
+    num = float(len(state_pairs))
     for n, pair in enumerate(state_pairs):
 
         if print_progress and (np.mod(n, 1000) == 0):
