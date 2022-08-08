@@ -231,7 +231,8 @@ class BalanceFPTEMP_11(Balance):
     def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=0.95):
         self.msid = 'fptemp'
         self.model_init = {'fptemp': limit, '1cbat': -55.0, 'sim_px': 110.0, 'eclipse': False, 'dpa_power': 0.0,
-                           'orbitephem0_x': 25000e3, 'orbitephem0_y': 25000e3, 'orbitephem0_z': 25000e3,
+                           'orbitephem0_x': 125000e3, 'orbitephem0_y': 125000e3, 'orbitephem0_z': 125000e3,
+                           'solarephem0_x': 2.6e10, 'solarephem0_y': -1.3e11, 'solarephem0_z': -5.7e10,
                            'aoattqt1': 0.0, 'aoattqt2': 0.0, 'aoattqt3': 0.0, 'aoattqt4': 1.0, 'dh_heater': False}
         self.limit_type = 'max'
 
@@ -376,17 +377,17 @@ class Composite(object):
 
         if anchors is None:
             self.anchors = {
-                '1dpamzt': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
-                '1deamzt': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
-                'fptemp_11': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 60},
+                '1dpamzt': {'anchor_limited_pitch': 155, 'anchor_offset_pitch': 70},
+                '1deamzt': {'anchor_limited_pitch': 155, 'anchor_offset_pitch': 70},
+                'fptemp_11': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 70},
                 '1pdeaat': {'anchor_limited_pitch': 45, 'anchor_offset_pitch': 160},
                 'aacccdpt': {'anchor_limited_pitch': 90, 'anchor_offset_pitch': 160},
                 'pm1thv2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
                 'pm2thv1t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
                 '4rt700t': {'anchor_limited_pitch': 90, 'anchor_offset_pitch': 160},
                 'pftank2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
-                'pline03t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 60},
-                'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 60},
+                'pline03t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
+                'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
             }
         else:
             self.anchors = anchors
