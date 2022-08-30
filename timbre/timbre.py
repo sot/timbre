@@ -20,7 +20,7 @@ non_state_names = {'aacccdpt': ['aca0', ],
                    'pline03t': ['pline03t0', ],
                    'pline04t': ['pline04t0', ],
                    'pm1thv2t': ['mups0', ],
-                   'pm2thv1t': ['mups0', ],
+                   'pm2thv1t': ['mups0', 'mups1'],
                    '1deamzt': ['dea0', ],
                    '1dpamzt': ['dpa0', ],
                    'fptemp_11': ['fptemp', '1cbat', 'sim_px'],
@@ -30,7 +30,7 @@ non_state_names = {'aacccdpt': ['aca0', ],
 def get_github_chandra_models_version_info():
     """ Download a list of all tags and branches, along with associated information.
 
-    :return: Dictionrary of all tags and branches, along with associated information.
+    :return: Dictionary of all tags and branches, along with associated information.
     :rtype: dict
     """
     with urlopen('https://api.github.com/repos/sot/chandra_models/tags') as url:
@@ -94,7 +94,7 @@ def load_github_model_specs(version='master'):
         'pline03t': '/chandra_models/xija/pline/pline03t_model_spec.json',
         'pline04t': '/chandra_models/xija/pline/pline04t_model_spec.json',
         'pm1thv2t': '/chandra_models/xija/mups_valve/pm1thv2t_spec.json',
-        'pm2thv1t': '/chandra_models/xija/mups_valve/pm2thv1t_spec.json',
+        'pm2thv1t': '/chandra_models/xija/mups_valve/pm2thv1t_spec_matlab.json',
     }
 
     all_versions_info = get_github_chandra_models_version_info()
@@ -166,7 +166,7 @@ def load_model_specs(version=None, local_repository_location=None):
         'pline03t': 'chandra_models/xija/pline/pline03t_model_spec.json',
         'pline04t': 'chandra_models/xija/pline/pline04t_model_spec.json',
         'pm1thv2t': 'chandra_models/xija/mups_valve/pm1thv2t_spec.json',
-        'pm2thv1t': 'chandra_models/xija/mups_valve/pm2thv1t_spec.json',
+        'pm2thv1t': 'chandra_models/xija/mups_valve/pm2thv1t_spec_matlab.json',
     }
 
     if local_repository_location is None:
