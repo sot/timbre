@@ -288,7 +288,7 @@ class BalancePM1THV2T(Balance):
 
     def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0):
         self.msid = 'pm1thv2t'
-        self.model_init = {'pm1thv2t': limit, 'mups0': limit, 'mups1': limit, 'eclipse': False, }
+        self.model_init = {'pm1thv2t': limit, 'mups0': limit, 'eclipse': False, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
@@ -298,7 +298,7 @@ class BalancePM2THV1T(Balance):
 
     def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0):
         self.msid = 'pm2thv1t'
-        self.model_init = {'pm2thv1t': limit, 'mups0': limit * 10, 'eclipse': False, }
+        self.model_init = {'pm2thv1t': limit, 'mups0': limit, 'mups1': limit, 'eclipse': False, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
