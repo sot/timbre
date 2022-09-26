@@ -10,6 +10,21 @@ from cxotime import CxoTime
 from .timbre import run_state_pairs, find_second_dwell, load_model_specs
 
 
+DEFAULT_ANCHORS = {
+    '1dpamzt': {'anchor_limited_pitch': 155, 'anchor_offset_pitch': 70},
+    '1deamzt': {'anchor_limited_pitch': 155, 'anchor_offset_pitch': 70},
+    'fptemp_11': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 70},
+    '1pdeaat': {'anchor_limited_pitch': 45, 'anchor_offset_pitch': 160},
+    'aacccdpt': {'anchor_limited_pitch': 90, 'anchor_offset_pitch': 160},
+    'pm1thv2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
+    'pm2thv1t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
+    '4rt700t': {'anchor_limited_pitch': 90, 'anchor_offset_pitch': 160},
+    'pftank2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
+    'pline03t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
+    'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
+}
+
+
 def get_limited_results(results, anchor_offset_pitch):
     """ Extract the limited dwell time results.
 
@@ -283,7 +298,7 @@ class BalancePM2THV1T(Balance):
 
     def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0):
         self.msid = 'pm2thv1t'
-        self.model_init = {'pm2thv1t': limit, 'mups0': limit * 10, 'eclipse': False, }
+        self.model_init = {'pm2thv1t': limit, 'mups0': limit, 'mups1': limit, 'eclipse': False, }
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
@@ -376,19 +391,7 @@ class Composite(object):
         self.model_specs = model_specs
 
         if anchors is None:
-            self.anchors = {
-                '1dpamzt': {'anchor_limited_pitch': 155, 'anchor_offset_pitch': 70},
-                '1deamzt': {'anchor_limited_pitch': 155, 'anchor_offset_pitch': 70},
-                'fptemp_11': {'anchor_limited_pitch': 170, 'anchor_offset_pitch': 70},
-                '1pdeaat': {'anchor_limited_pitch': 45, 'anchor_offset_pitch': 160},
-                'aacccdpt': {'anchor_limited_pitch': 90, 'anchor_offset_pitch': 160},
-                'pm1thv2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
-                'pm2thv1t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
-                '4rt700t': {'anchor_limited_pitch': 90, 'anchor_offset_pitch': 160},
-                'pftank2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
-                'pline03t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
-                'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
-            }
+            self.anchors = DEFAULT_ANCHORS
         else:
             self.anchors = anchors
 
