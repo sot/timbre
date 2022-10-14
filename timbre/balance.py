@@ -412,16 +412,16 @@ class Composite(object):
 
         acis_on_const = {'roll': roll, 'fep_count': chips, 'ccd_count': chips, 'clocking': True, 'vid_board': True,
                          'sim_z': 100000}
-        acis_off_stowed_const = {'roll': roll, 'fep_count': 0, 'ccd_count': 0, 'clocking': False, 'vid_board': False,
+        acis_off_stowed_const = {'roll': roll, 'fep_count': 3, 'ccd_count': 0, 'clocking': False, 'vid_board': False,
                                  'sim_z': -99616}
         psmc_on_const = {'roll': roll, 'fep_count': chips, 'ccd_count': chips, 'clocking': True, 'vid_board': True,
                          'sim_z': 100000, 'dh_heater': False}
-        psmc_off_stowed_const = {'roll': roll, 'fep_count': 0, 'ccd_count': 0, 'clocking': False, 'vid_board': False,
+        psmc_off_stowed_const = {'roll': roll, 'fep_count': 3, 'ccd_count': 0, 'clocking': False, 'vid_board': False,
                                  'sim_z': -99616, 'dh_heater': False}
 
         sc_const = {'roll': roll}
 
-        if chips > 0:
+        if self.limits['fptemp_11'] < -99.0:
             self.dpa = Balance1DPAMZT(self.date, self.model_specs['1dpamzt'], self.limits['1dpamzt'], acis_on_const)
             self.dea = Balance1DEAMZT(self.date, self.model_specs['1deamzt'], self.limits['1deamzt'], acis_on_const)
             self.acisfp = BalanceFPTEMP_11(self.date, self.model_specs['fptemp_11'], self.limits['fptemp_11'],
