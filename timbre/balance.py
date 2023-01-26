@@ -22,6 +22,7 @@ DEFAULT_ANCHORS = {
     'pftank2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
     'pline03t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
     'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
+    '2ceahvpt': {'anchor_limited_pitch': 80, 'anchor_offset_pitch': 90},
 }
 
 
@@ -73,7 +74,8 @@ class Balance(object):
 
     """
 
-    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor):
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor, offset_conditions=None,
+                 limited_conditions=None):
         """ Run a Xija model for a given time and state profile.
 
         :param date: Date used for the dwell balance analysis
@@ -90,9 +92,18 @@ class Balance(object):
             some conservatism to the ACIS maximum dwell time predictions, which are used to determine the available
             cooling time for models that heat at forward and normal sun attitudes
         :type margin_factor: float
-
+        :param offset_conditions: Dictionary of conditions that only occur during offset dwells
+        :type offset_conditions: dict or None, optional
+        :param limited_conditions: Dictionary of conditions that only occur during limiting dwells
+        :type limited_conditions: dict or None, optional
 
         """
+
+        if offset_conditions is None:
+            offset_conditions = {}
+
+        if limited_conditions is None:
+            limited_conditions = {}
 
         self.date = CxoTime(date).date
         self.datesecs = CxoTime(date).secs
@@ -102,6 +113,8 @@ class Balance(object):
         self.margin_factor = margin_factor
         self.anchor_offset_time = np.nan
         self.anchor_limited_time = np.nan
+        self.offset_conditions = offset_conditions
+        self.limited_conditions = limited_conditions
         self.results = None
 
     def find_anchor_condition(self, p_offset, p_limited, anchor_offset_time, limit):
@@ -121,8 +134,8 @@ class Balance(object):
         # Define dwell states that are used to determine max cooling dwell time
         #
         # Note: self.constant_conditions does not include initial conditions for the primary and pseudo nodes.
-        dwell1_state = {**{'pitch': p_offset}, **self.constant_conditions}
-        dwell2_state = {**{'pitch': p_limited}, **self.constant_conditions}
+        dwell1_state = {**{'pitch': p_offset}, **self.constant_conditions, **self.offset_conditions}
+        dwell2_state = {**{'pitch': p_limited}, **self.constant_conditions, **self.limited_conditions}
 
         # Find maximum hot time (including margin safety factor)
         dwell_results = find_second_dwell(self.date, dwell1_state, dwell2_state, anchor_offset_time, self.msid,
@@ -132,17 +145,19 @@ class Balance(object):
         self.anchor_offset_time = anchor_offset_time
         self.anchor_limited_time = dwell_results['dwell_2_time'] * self.margin_factor
 
-    def generate_balanced_pitch_dwells(self, datesecs, pitch_1, t_1, pitch_2, t_2_orig, limit, pitch_range):
-        """ Calculate the balanced heating and cooling dwell curves seeded by `pitch_1` and `pitch_2`.
+    def generate_balanced_pitch_dwells(self, datesecs, anchor_limited_pitch, t_1, anchor_offset_pitch, t_2_orig, limit,
+                                       pitch_range):
+        """ Calculate the balanced heating and cooling dwell curves seeded by `anchor_limited_pitch` and
+        `anchor_offset_pitch`.
 
         :param datesecs: Date used for simulation (seconds)
         :type datesecs: float
-        :param pitch_1: Anchor limited pitch
-        :type pitch_1: float
+        :param anchor_limited_pitch: Anchor limited pitch
+        :type anchor_limited_pitch: float
         :param t_1: Anchor limited dwell duration (seconds)
         :type t_1: float
-        :param pitch_2: Anchor offset pitch
-        :type pitch_2: float
+        :param anchor_offset_pitch: Anchor offset pitch
+        :type anchor_offset_pitch: float
         :param t_2_orig: Originally calculated anchor offset dwell duration (seconds)
         :type t_2_orig: float
         :param limit: Thermal limit
@@ -151,19 +166,20 @@ class Balance(object):
         :type pitch_range: iterable (list, numpy.ndarray)
 
         A balanced set of dwell curves are calculated in two steps:
-            1) Calculate the offset dwell curve yielded by `pitch_1` at `t_1`.
-            2) Use the time calculated in step 1 for `pitch_2` with this pitch to determine the limited dwell curve.
+            1) Calculate the offset dwell curve yielded by `anchor_limited_pitch` at `t_1`.
+            2) Use the time calculated in step 1 for `anchor_offset_pitch` with this pitch to determine the limited
+               dwell curve.
 
         """
 
         # Expand dwell capability curve yielded by time #1 at pitch #1 (e.g. anchor hot time)
-        state_pairs = list(({**{'pitch': pitch_1}, **self.constant_conditions},
-                            {**{'pitch': p2}, **self.constant_conditions})
+        state_pairs = list(({**{'pitch': anchor_limited_pitch}, **self.constant_conditions, **self.limited_conditions},
+                            {**{'pitch': p2}, **self.constant_conditions, **self.offset_conditions})
                            for p2 in pitch_range)
 
         if np.isnan(t_1):
-            msg1 = f'{self.msid} is not limited at a pitch of {pitch_1} degrees near {CxoTime(datesecs).date},' \
-                   f' with the following constant conditions:\n{self.constant_conditions}.\n'
+            msg1 = f'{self.msid} is not limited at a pitch of {anchor_limited_pitch} degrees near ' \
+                   f'{CxoTime(datesecs).date}, with the following constant conditions:\n{self.constant_conditions}.\n'
             print(msg1)
             return None
 
@@ -175,16 +191,16 @@ class Balance(object):
         # the originally calculated  offset time at the offset pitch. I encountered this issue with the pftank2t model
         # with an edge case that initially had some long dwell times before refining the composite dwell curve (as a
         # part of the algorithm).
-        ind = results1['pitch2'] == pitch_2
+        ind = results1['pitch2'] == anchor_offset_pitch
         if np.isnan(results1[ind]['t_dwell2']):
             results1['t_dwell2'] = t_2_orig
 
         # Expand dwell capability curve yielded by pitch #2 at the associated time calculated above.
         # This will include but expand upon the original time #1 at pitch #1 passed to this method.
-        t_2_ind = results1['pitch2'] == pitch_2
+        t_2_ind = results1['pitch2'] == anchor_offset_pitch
         t_2 = results1['t_dwell2'][t_2_ind].item()
-        state_pairs = list(({**{'pitch': pitch_2}, **self.constant_conditions},
-                            {**{'pitch': p2}, **self.constant_conditions})
+        state_pairs = list(({**{'pitch': anchor_offset_pitch}, **self.constant_conditions, **self.offset_conditions},
+                            {**{'pitch': p2}, **self.constant_conditions, **self.limited_conditions})
                            for p2 in pitch_range)
 
         args = (self.msid, self.model_spec, self.model_init, limit, datesecs, t_2, state_pairs)
@@ -209,6 +225,57 @@ class Balance(object):
                     results[ind]['t_dwell2'] = np.nan
 
         return results
+
+
+class Balance2CEAHVPT(Balance):
+
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=0.95, custom_offset_conditions=None,
+                 custom_limited_conditions=None):
+
+        if custom_offset_conditions is None:
+            custom_offset_conditions = {}
+
+        if custom_limited_conditions is None:
+            custom_limited_conditions = {}
+
+        self.msid = '2ceahvpt'
+        self.model_init = {'2ceahvpt': limit, 'cea0': limit, 'cea1': limit, 'eclipse': False, 'dpa_power': 0.0}
+        self.limit_type = 'max'
+
+        limited_conditions = {
+            '2ps5aon_on': True,
+            '2ps5bon_on': True,
+            '2imonst_on': True,
+            '2sponst_on': True,
+            '2s2onst_on': True,
+            '224pcast_off': False,
+            '215pcast_off': True,
+            'ccd_count': 2,
+            'fep_count': 2,
+            'clocking': True,
+            'vid_board': True,
+            'sim_z': -99616
+        }
+        limited_conditions.update(custom_limited_conditions)
+
+        offset_conditions = {
+            '2ps5aon_on': False,
+            '2ps5bon_on': False,
+            '2imonst_on': False,
+            '2sponst_on': False,
+            '2s2onst_on': False,
+            '224pcast_off': False,
+            '215pcast_off': False,
+            'ccd_count': 4,
+            'fep_count': 4,
+            'clocking': True,
+            'vid_board': True,
+            'sim_z': 100000
+        }
+        offset_conditions.update(custom_offset_conditions)
+
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor,
+                         offset_conditions=offset_conditions, limited_conditions=limited_conditions)
 
 
 class Balance1DPAMZT(Balance):
@@ -448,7 +515,7 @@ class Composite(object):
 
         dashes = ''.join(["-", ] * 120)
         print(f'{dashes}\nMap Dwell Capability\n{dashes}')
-        self.composite = self.map_composite()
+        self.map_composite()
 
         print(f'{dashes}\nFill In Dwell Capability\n{dashes}\n')
         self.fill_composite()

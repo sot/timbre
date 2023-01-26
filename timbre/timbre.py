@@ -7,8 +7,8 @@ from urllib.request import urlopen
 from urllib.parse import urljoin
 import json
 from git import Repo
-import numpy as np
-from scipy import interpolate
+import numpy as np # noqa
+from scipy import interpolate # noqa
 
 from cxotime import CxoTime
 import xija
@@ -24,7 +24,8 @@ non_state_names = {'aacccdpt': ['aca0', ],
                    '1deamzt': ['dea0', ],
                    '1dpamzt': ['dpa0', ],
                    'fptemp_11': ['fptemp', '1cbat', 'sim_px'],
-                   '1pdeaat': ['pin1at', ]}
+                   '1pdeaat': ['pin1at', ],
+                   '2ceahvpt': ['cea0', 'cea1']}
 
 
 def get_github_chandra_models_version_info():
@@ -95,6 +96,7 @@ def load_github_model_specs(version='master'):
         'pline04t': '/chandra_models/xija/pline/pline04t_model_spec.json',
         'pm1thv2t': '/chandra_models/xija/mups_valve/pm1thv2t_spec.json',
         'pm2thv1t': '/chandra_models/xija/mups_valve/pm2thv1t_spec_matlab.json',
+        '2ceahvpt': '/chandra_models/xija/hrc/cea_spec.json',
     }
 
     all_versions_info = get_github_chandra_models_version_info()
@@ -144,7 +146,7 @@ def load_model_specs(version=None, local_repository_location=None):
 
         :param model_location: Relative location of model file, starting from the chandra_models root repository
             location
-        :type model_locations: str
+        :type model_location: str
 
         :return: JSON file stored as a dictionary, md5 hash of file
         :rtype: tuple
@@ -167,6 +169,7 @@ def load_model_specs(version=None, local_repository_location=None):
         'pline04t': 'chandra_models/xija/pline/pline04t_model_spec.json',
         'pm1thv2t': 'chandra_models/xija/mups_valve/pm1thv2t_spec.json',
         'pm2thv1t': 'chandra_models/xija/mups_valve/pm2thv1t_spec_matlab.json',
+        '2ceahvpt': 'chandra_models/xija/hrc/cea_spec.json',
     }
 
     if local_repository_location is None:
@@ -767,11 +770,12 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                        'pline03t': ['pline03t0', ],
                        'pline04t': ['pline04t0', ],
                        'pm1thv2t': ['mups0', ],
-                       'pm2thv1t': ['mups0', ],
+                       'pm2thv1t': ['mups0', 'mups1'],
                        '1deamzt': ['dea0', ],
                        '1dpamzt': ['dpa0', ],
                        'fptemp': ['fptemp', '1cbat', 'sim_px'],
-                       '1pdeaat': ['pin1at', ]}
+                       '1pdeaat': ['pin1at', ],
+                       '2ceahvpt': ['cea0', 'cea1']}
 
     base_dtype = [('msid', 'U20'),
                   ('date', 'U8'),

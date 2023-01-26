@@ -2,13 +2,18 @@
 
 from cxotime import CxoTime
 import pandas as pd
+import numpy as np
 from os.path import expanduser
 from multiprocessing import Pool, Manager
+from copy import copy
 
-from timbre import Composite
+from timbre import Composite, DEFAULT_ANCHORS, get_local_model, Balance2CEAHVPT
 
 home = expanduser("~")
 
+INPUT_COLUMNS = ['fptemp_11_limit', '1dpamzt_limit', '1deamzt_limit', '1pdeaat_limit', 'aacccdpt_limit',
+                 '4rt700t_limit', 'pftank2t_limit', 'pm1thv2t_limit', 'pm2thv1t_limit', 'pline03t_limit',
+                 'pline04t_limit', 'date', 'datesecs', 'dwell_type', 'roll', 'chips', 'pitch']
 
 def add_inputs(p, limits, date, dwell_type, roll, chips):
     """
@@ -216,5 +221,125 @@ def process_queue(input_sets, max_dwell, pitch_step, filename, cpu_count=2, num_
     q.put('kill')
     pool.close()
     pool.join()
+
+
+def find_inputs_from_results(all_results, pitch=90):
+    """ Determine the list of non-pitch input conditions that were used to generate a given set of Timbre results.
+
+    :param all_results: Timbre results
+    :type all_results: np.array
+    :param pitch: pitch to pull input results for
+    :type pitch: int, float, optional
+
+    :returns: pd.DateFrame
+
+    """
+
+    pitch = int(pitch)
+    single_pitch_limit_results = all_results.loc[(all_results['pitch'] == pitch).values &
+                                                 (all_results['dwell_type'] == 'limit').values]
+    duplicate_values = all_results.duplicated().values
+    if any(duplicate_values):
+        single_pitch_limit_results = single_pitch_limit_results.loc[~duplicate_values]
+    return single_pitch_limit_results[INPUT_COLUMNS].reset_index(drop=True)
+
+
+def generate_hrc_estimates(all_results, cea_model_spec, filename, limit=10, limited_matches_offset=False,
+                           anchor_limited_pitch=None):
+
+    inputs = find_inputs_from_results(all_results, pitch=90)
+    indexed_results = all_results.set_index(INPUT_COLUMNS)
+
+    # Initial parameters to create Balance2CEAHVPT object
+    msid = '2ceahvpt'
+    anchors = DEFAULT_ANCHORS
+    anchor_offset_pitch = anchors[msid]['anchor_offset_pitch']
+    if anchor_limited_pitch is None:
+        anchor_limited_pitch = anchors[msid]['anchor_limited_pitch']
+    constant_conditions = {'roll': 0, 'dh_heater': False}
+    pitch_range = np.arange(45, 181, 1)
+    placeholder_date = '2023:001'
+
+    # Create Balance object
+    model = Balance2CEAHVPT(placeholder_date, cea_model_spec, limit, constant_conditions, custom_offset_conditions=None,
+                            custom_limited_conditions=None)
+
+    # Initialize case_results dataframe
+    case_results = pd.DataFrame(columns=['2ceahvpt', 'instrument'] + INPUT_COLUMNS)
+
+    num_cases = len(inputs)
+    for case_num in range(num_cases):
+
+        print(f'{CxoTime().date}: Running case number {case_num} out of {num_cases}')
+
+        # Update case parameters
+        chips = inputs.iloc[case_num]['chips']
+        model.offset_conditions.update({'ccd_count': chips, 'fep_count': chips})
+        composite_case = indexed_results.loc[tuple(inputs.iloc[case_num].values[:-1])].min(axis=1)
+        anchor_offset_time = composite_case.loc[anchor_offset_pitch]
+
+        if limited_matches_offset is True:
+            model.limited_conditions = copy(model.offset_conditions)
+
+        # Run case
+        model.find_anchor_condition(anchor_offset_pitch, anchor_limited_pitch, anchor_offset_time, limit)
+        model.results = model.generate_balanced_pitch_dwells(model.datesecs,
+                                                             anchor_limited_pitch,
+                                                             model.anchor_limited_time,
+                                                             anchor_offset_pitch,
+                                                             anchor_offset_time,
+                                                             limit,
+                                                             pitch_range)
+
+        # Create cols list to index into inputs dataframe, pitch is dealt with separately
+        cols = copy(INPUT_COLUMNS)
+        cols.remove('pitch')
+
+        # Initialize temporary results dataframes
+        case_limited_results = pd.DataFrame(index=pitch_range, columns=['2ceahvpt', ] + cols)
+        case_offset_results = pd.DataFrame(index=pitch_range, columns=['2ceahvpt', ] + cols)
+
+        # Copy inputs into results dataframes
+        case_limited_results[cols] = inputs.iloc[case_num].loc[cols]
+        case_offset_results[cols] = inputs.iloc[case_num].loc[cols]
+
+        if model.results is not None:
+
+            # Find indices to offset and limited dwell results
+            limited_ind = model.results['pitch1'] == anchor_offset_pitch
+            offset_ind = model.results['pitch1'] == anchor_limited_pitch
+
+            # Copy results intp results dataframes
+            case_limited_results['2ceahvpt'] = model.results['t_dwell2'][limited_ind]
+            case_offset_results['2ceahvpt'] = model.results['t_dwell2'][offset_ind]
+
+        else:
+            case_limited_results['2ceahvpt'] = np.nan
+            case_offset_results['2ceahvpt'] = np.nan
+
+        # Add dwell type
+        case_limited_results['dwell_type'] = 'limit'
+        case_offset_results['dwell_type'] = 'offset'
+
+
+        # Add instrument
+        if limited_matches_offset is False:
+            case_limited_results['instrument'] = 'hrc'
+        else:
+            case_limited_results['instrument'] = 'acis'
+        case_offset_results['instrument'] = 'acis'
+
+        # Add pitch from results index (same for both actually)
+        case_limited_results['pitch'] = case_limited_results.index
+        case_offset_results['pitch'] = case_offset_results.index
+
+        # Add case results to full results dataframe
+        case_results = pd.concat([case_results, case_limited_results, case_offset_results], ignore_index=True)
+
+    case_results.to_csv(filename)
+
+
+
+
 
 
