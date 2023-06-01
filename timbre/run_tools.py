@@ -52,7 +52,7 @@ def add_inputs(p, limits, date, dwell_type, roll, chips):
     return p
 
 
-def run_instance(date, chips, limits, roll, max_dwell, pitch_step, model_specs=None, anchors=None):
+def run_instance(date, chips, limits, roll, max_dwell, pitch_step, model_specs=None, anchors=None, maneuvers=False):
     """
     Helper function to run a Composite analysis and add the results to the Multiprocessing shared list.
 
@@ -73,12 +73,14 @@ def run_instance(date, chips, limits, roll, max_dwell, pitch_step, model_specs=N
     :type model_specs: dict or None, optional
     :param anchors: Dictionary of anchor values, if None is passed then default anchors are used
     :type anchors: dict or None, optional
+    :param maneuvers: Boolean indicating whether to consider maneuver time
+    :type maneuvers: bool, optional
     :returns: None
     """
 
     try:
         timbre_object = Composite(date, chips, roll, limits, max_dwell=max_dwell, pitch_step=pitch_step,
-                                  model_specs=model_specs, anchors=anchors)
+                                  model_specs=model_specs, anchors=anchors, maneuvers=maneuvers)
         limited_data = timbre_object.limited_results
         offset_data = timbre_object.offset_results
 
@@ -91,7 +93,8 @@ def run_instance(date, chips, limits, roll, max_dwell, pitch_step, model_specs=N
         print(f'Date: {date}, Chips: {chips}, Roll: {roll}, \nLimits: {limits}')
 
 
-def run_all_permutations(input_sets, filename, max_dwell=200000, pitch_step=5, model_specs=None, anchors=None):
+def run_all_permutations(input_sets, filename, max_dwell=200000, pitch_step=5, model_specs=None, anchors=None,
+                         maneuvers=False):
     """ Run all permutations of dates x chip_nums x limit_sets
 
     :param input_sets: Dates to be simulated
@@ -107,6 +110,8 @@ def run_all_permutations(input_sets, filename, max_dwell=200000, pitch_step=5, m
     :type model_specs: dict or None, optional
     :param anchors: Dictionary of anchor values, if None is passed then default anchors are used
     :type anchors: dict or None, optional
+    :param maneuvers: Boolean indicating whether to consider maneuver time
+    :type maneuvers: bool, optional
     :returns: None
 
     """
@@ -117,7 +122,8 @@ def run_all_permutations(input_sets, filename, max_dwell=200000, pitch_step=5, m
         roll = input_set.iloc[-3]
         chips = input_set.iloc[-2]
         date = input_set.iloc[-1]
-        data = run_instance(date, chips, limits, roll, max_dwell, pitch_step, model_specs=model_specs, anchors=anchors)
+        data = run_instance(date, chips, limits, roll, max_dwell, pitch_step, model_specs=model_specs, anchors=anchors,
+                            maneuvers=maneuvers)
         data.to_csv(filename, mode='a', index=False, header=False)
 
         text1 = f'{CxoTime().date}: Finished Limit Set {n + 1} out of '
@@ -134,12 +140,13 @@ def _worker(arg, q):
     :type q: mulitprocessing.Manager.Queue
     """
 
-    (input_set, max_dwell, pitch_step, model_specs, n, num_sets, anchors) = arg
+    (input_set, max_dwell, pitch_step, model_specs, n, num_sets, anchors, maneuvers) = arg
     limits = input_set.iloc[:-3]
     roll = input_set.iloc[-3]
     chips = input_set.iloc[-2]
     date = input_set.iloc[-1]
-    res = run_instance(date, chips, limits, roll, max_dwell, pitch_step, model_specs=model_specs, anchors=anchors)
+    res = run_instance(date, chips, limits, roll, max_dwell, pitch_step, model_specs=model_specs, anchors=anchors,
+                       maneuvers=maneuvers)
 
     text1 = f'{CxoTime().date}: Finished Limit Set {n + 1} out of '
     text2 = f'{num_sets}:\n{input_set}\nFor {date} and Chip Numbers {chips}\n\n'
@@ -176,7 +183,7 @@ def _listener(filename, q):
 
 
 def process_queue(input_sets, max_dwell, pitch_step, filename, cpu_count=2, num_cases=None, model_specs=None,
-                  anchors=None):
+                  anchors=None, maneuvers=False):
     """ Run a set of Timbre cases using a pool of CPUs
 
     :param input_sets: Dates to be simulated
@@ -197,6 +204,8 @@ def process_queue(input_sets, max_dwell, pitch_step, filename, cpu_count=2, num_
     :param anchors: Dictionary of anchor values, if None is passed then default anchors are used
     :type anchors: dict or None, optional
     :type model_specs: dict or None, optional
+    :param maneuvers: Boolean indicating whether to consider maneuver time
+    :type maneuvers: bool, optional
 
     :returns: None
 
@@ -217,7 +226,7 @@ def process_queue(input_sets, max_dwell, pitch_step, filename, cpu_count=2, num_
     # start workers
     jobs = []
     for n, input_set in input_sets.iloc[:num_cases].iterrows():
-        arg = (input_set, max_dwell, pitch_step, model_specs, n, num_cases, anchors)
+        arg = (input_set, max_dwell, pitch_step, model_specs, n, num_cases, anchors, maneuvers)
         job = pool.apply_async(_worker, (arg, q))
         jobs.append(job)
 
