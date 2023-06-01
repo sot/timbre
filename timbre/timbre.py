@@ -318,12 +318,12 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
     model = setup_model(msid, times[0], times[-1], model_spec, init)
 
     for key, value in schedule.items():
-        model.comp[key].set_data(value, times=times)
+        model.comp[key].set_data(value['data'], times=value['times'])
 
     model.make()
     model.calc()
     tmsid = model.get_comp(msid)
-    results = {msid: tmsid}
+    results = {msid: tmsid, 'pitch': model.get_comp('pitch')}
 
     if pseudo is not None:
         results[pseudo] = model.get_comp(pseudo)
@@ -331,8 +331,32 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
     return results
 
 
+def calc_maneuver_time(p1, p2):
+    """ Calculate the pure-pitch maneuver time between two pitch values
+
+    :param p1: First pitch
+    :type p1: float or int
+    :param p2: Second pitch
+    :type p2: float or int
+    """
+
+    omega_max = 0.075
+    # alpha_max = 0.000125
+    # time to reach cruise = omega_max / alpha_max = 600s
+    # delta pitch to reach cruise = alpha_max * (600. ** 2) / 2. = 22.5 deg
+
+    t_to_cruise = 600
+    p_to_cruise = 22.5
+    delta_pitch_half = np.abs(p2 - p1) / 2.
+
+    if delta_pitch_half <= p_to_cruise:
+        return 2 * t_to_cruise * delta_pitch_half / p_to_cruise
+    else:
+        return 2 * (delta_pitch_half - p_to_cruise) / omega_max + 1200  # 1200 = 600 * 2
+
+
 def calc_binary_schedule(datesecs, state1, state2, t_dwell1, t_dwell2, msid, model_spec, init, duration=2592000.,
-                         t_backoff=1725000., pseudo=None):
+                         t_backoff=1725000., pseudo=None, maneuvers=False):
     """ Simulate a schedule that switches between two states
 
     This runs the model over a "binary" schedule. This function is intended to be used to optimize the `t_dwell2`
@@ -363,6 +387,8 @@ def calc_binary_schedule(datesecs, state1, state2, t_dwell1, t_dwell2, msid, mod
     :param pseudo: Name of one or more pseudo MSIDs used in the model, if any, only necessary if one wishes to retrieve
         model results for this pseudo node, if it exists. This currently is not used but kept here as a placeholder.
     :type pseudo: str, optional
+    :param maneuvers: flag indicating whether to consider maneuver time in the simulation
+    :type maneuvers: bool, optional
     :returns:
         - **results** (:py:class:`dict`) - keys are node names (e.g. 'aacccdpt', 'aca0'), values are Xija model
             component objects, this is the same object returned by `run_profile`
@@ -377,24 +403,52 @@ def calc_binary_schedule(datesecs, state1, state2, t_dwell1, t_dwell2, msid, mod
         - Keys in state1 must match Xija component names (e.g. 'pitch', 'ccd_count', 'sim_z')
     """
 
-    num = int(duration / (t_dwell1 + t_dwell2))
-    reltimes = np.cumsum([1, t_dwell1 - 1, 1, t_dwell2 - 1] * num)
-    times = np.array(reltimes) - reltimes[0] + datesecs - t_backoff
+    if maneuvers is False:
+        num = int(duration / (t_dwell1 + t_dwell2))
+        reltimes = np.cumsum([1, t_dwell1 - 1, 1, t_dwell2 - 1] * num)
+        times = np.array(reltimes) - reltimes[0] + datesecs - t_backoff
 
-    schedule = dict(zip(state1.keys(), []))
-    for key, value in state1.items():
-        layout = [state1[key], state1[key], state2[key], state2[key]] * num
-        schedule[key] = np.array(layout)
+        schedule = {}
+        for key, value in state1.items():
+            layout = [state1[key], state1[key], state2[key], state2[key]] * num
+            schedule[key] = {'data': np.array(layout), 'times': times}
 
-    state_keys = [1, 1, 2, 2] * num
+        state_keys = [1, 1, 2, 2] * num
+
+    else:
+        maneuver_time = calc_maneuver_time(state1['pitch'], state2['pitch'])
+        num = int(duration / (t_dwell1 + t_dwell2 + 2 * maneuver_time))
+        reltimes = np.cumsum([1, t_dwell1 - 1, maneuver_time,
+                              1, t_dwell2 - 1, maneuver_time] * num)
+        times = np.array(reltimes) - reltimes[0] + datesecs - t_backoff
+
+        high_resolution_times = np.arange(times[0], times[-1] + 1e-6, 1)
+
+        schedule = {}
+        for key, value in state1.items():
+            if 'pitch' not in key.lower():
+                layout = [state1[key], state1[key], state1[key], state2[key], state2[key], state2[key]] * num
+            else:
+                layout = [state1[key], state1[key], state2[key], state2[key], state2[key], state1[key]] * num
+
+            if 'pitch' in key.lower():
+                # This is necessary to force the nearest neighbor intepolation done in Xija to use interpolated pitch
+                # values.
+                schedule[key] = {'data': np.interp(high_resolution_times, times, layout),
+                                 'times': high_resolution_times}
+            else:
+                schedule[key] = {'data': np.array(layout), 'times': times}
+
+        state_keys = [1, 1, 1, 2, 2, 2] * num
+
     state_keys = np.array(state_keys)
-
     model_results = run_profile(times, schedule, msid, model_spec, init, pseudo=pseudo)
 
     return model_results, times, state_keys
 
 
-def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_spec, init, t_backoff, duration):
+def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_spec, init, t_backoff, duration,
+                   maneuvers=False):
     """ Generate a Xija model function with preset values, for use with an optimization routine.
 
     :param datesecs: Date for start of simulation, in seconds from '1997:365:23:58:56.816' (cxotime.CxoTime epoch)
@@ -416,6 +470,8 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
     :type t_backoff: float, optional
     :param duration: Duration for entire simulated schedule, defaults to 30 days (in seconds)
     :type duration: float, optional
+    :param maneuvers: flag indicating whether to consider maneuver time in the simulation
+    :type maneuvers: bool, optional
     :returns: Function generated from specified parameters, to be passed to optimization routine
     :rtype: function
 
@@ -427,7 +483,8 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
 
     def opt_binary_schedule(t):
         model_results, _, _ = calc_binary_schedule(datesecs, dwell1_state, dwell2_state, t_dwell1, t, msid,
-                                                   model_spec, init, duration=duration, t_backoff=t_backoff)
+                                                   model_spec, init, duration=duration, t_backoff=t_backoff,
+                                                   maneuvers=maneuvers)
 
         model_temps = model_results[msid].mvals
         model_times = model_results[msid].times
@@ -442,7 +499,8 @@ def create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_s
 
 
 def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, model_spec, init, limit_type='max',
-                      duration=2592000, t_backoff=1725000, n_dwells=10, min_dwell=None, max_dwell=None, pseudo=None):
+                      duration=2592000, t_backoff=1725000, n_dwells=10, min_dwell=None, max_dwell=None, pseudo=None,
+                      maneuvers=False):
     """ Determine the required dwell time at pitch2 to balance a given fixed dwell time at pitch1, if any exists.
 
     :param date: Date for start of simulation, in seconds from '1997:365:23:58:56.816' (cxotime.CxoTime epoch) or any
@@ -479,6 +537,8 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     :param pseudo: Name of one or more pseudo MSIDs used in the model, if any, only necessary if one wishes to retrieve
         model results for this pseudo node, if it exists. This currently is not used but kept here as a placeholder.
     :type pseudo: str, optional
+    :param maneuvers: flag indicating whether to consider maneuver time in the simulation
+    :type maneuvers: bool, optional
     :returns: Dictionary of results information
     :rtype: dict
     """
@@ -509,7 +569,7 @@ def find_second_dwell(date, dwell1_state, dwell2_state, t_dwell1, msid, limit, m
     t_dwell1 = float(t_dwell1)
 
     opt_fun = create_opt_fun(datesecs, dwell1_state, dwell2_state, t_dwell1, msid, model_spec, init, t_backoff,
-                             duration)
+                             duration, maneuvers=maneuvers)
 
     # First just check the bounds to avoid unnecessary runs of `opt_fun`
     output = np.array([opt_fun(t) for t in [min_dwell, max_dwell]],
@@ -697,7 +757,8 @@ def _refine_dwell2_time(limit_type, n_dwells, min_dwell, max_dwell, limit, opt_f
 
 
 def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state_pairs, limit_type='max',
-                    min_dwell=None, max_dwell=None, n_dwells=10, print_progress=True, shared_data=None):
+                    min_dwell=None, max_dwell=None, n_dwells=10, print_progress=True, maneuvers=False,
+                    shared_data=None):
     """ Determine dwell balance times for a set of cases.
 
     :param msid: Primary MSID for model being run
@@ -726,6 +787,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
     :type max_dwell: float
     :param n_dwells: Number of second dwell, `t_dwell2`,  possibilities to run (more dwells = finer resolution)
     :type n_dwells: int, optional
+    :param maneuvers: flag indicating whether to consider maneuver time in the simulation
+    :type maneuvers: bool, optional
     :param shared_data: Shared list of results, used when running multiple `run_state_pairs` threads in parallel via
         the multiprocessing package
     :type shared_data: multiprocessing.managers.ListProxy, optoinal
@@ -814,7 +877,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
 
         dwell_results = find_second_dwell(date, dwell1_state, dwell2_state, dwell_1_duration, msid, limit, model_spec,
                                           init, limit_type=limit_type, duration=duration, t_backoff=t_backoff,
-                                          n_dwells=n_dwells, min_dwell=min_dwell, max_dwell=max_dwell, pseudo=None)
+                                          n_dwells=n_dwells, min_dwell=min_dwell, max_dwell=max_dwell, pseudo=None,
+                                          maneuvers=maneuvers)
 
         row = [msid.encode('utf-8'),
                datestr.encode('utf-8'),
