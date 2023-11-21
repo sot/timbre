@@ -88,7 +88,7 @@ def load_github_model_specs(version='master'):
         'aacccdpt': '/chandra_models/xija/aca/aca_spec.json',
         '1deamzt': '/chandra_models/xija/dea/dea_spec.json',
         '1dpamzt': '/chandra_models/xija/dpa/dpa_spec.json',
-        'fptemp': '/chandra_models/xija/acisfp/acisfp_spec_matlab.json',
+        'fptemp': '/chandra_models/xija/acisfp/acisfp_spec.json',
         '1pdeaat': '/chandra_models/xija/psmc/psmc_spec.json',
         'pftank2t': '/chandra_models/xija/pftank2t/pftank2t_spec.json',
         '4rt700t': '/chandra_models/xija/fwdblkhd/4rt700t_spec.json',
@@ -323,7 +323,8 @@ def run_profile(times, schedule, msid, model_spec, init, pseudo=None):
     model.make()
     model.calc()
     tmsid = model.get_comp(msid)
-    results = {msid: tmsid, 'pitch': model.get_comp('pitch')}
+    pitch = model.get_comp('pitch')
+    results = {msid: tmsid, 'pitch': pitch}
 
     if pseudo is not None:
         results[pseudo] = model.get_comp(pseudo)
