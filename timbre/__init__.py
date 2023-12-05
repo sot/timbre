@@ -10,6 +10,7 @@ from .balance import BalancePLINE03T, Composite, get_limited_results, get_offset
 from .balance import Balance2CEAHVPT  # noqa
 
 from .run_tools import add_inputs, run_instance, run_all_permutations, process_queue, generate_hrc_estimates
+from .run_tools import process_queue_hrc
 
 __version__ = ska_helpers.get_version(__package__)
 
