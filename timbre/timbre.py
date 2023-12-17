@@ -14,7 +14,8 @@ from cxotime import CxoTime
 import xija
 from xija import get_model_spec
 
-non_state_names = {'aacccdpt': ['aca0', ],
+
+NON_STATE_NAMES = {'aacccdpt': ['aca0', ],
                    'pftank2t': ['pf0tank2t', ],
                    '4rt700t': ['oba0', ],
                    'pline03t': ['pline03t0', ],
@@ -26,6 +27,21 @@ non_state_names = {'aacccdpt': ['aca0', ],
                    'fptemp_11': ['fptemp', '1cbat', 'sim_px'],
                    '1pdeaat': ['pin1at', ],
                    '2ceahvpt': ['cea0', 'cea1']}
+
+MODEL_LOCATIONS = {
+    'aacccdpt': '/chandra_models/xija/aca/aca_spec.json',
+    '1deamzt': '/chandra_models/xija/dea/dea_spec.json',
+    '1dpamzt': '/chandra_models/xija/dpa/dpa_spec.json',
+    'fptemp': '/chandra_models/xija/acisfp/acisfp_spec.json',
+    '1pdeaat': '/chandra_models/xija/psmc/psmc_spec.json',
+    'pftank2t': '/chandra_models/xija/pftank2t/pftank2t_spec.json',
+    '4rt700t': '/chandra_models/xija/fwdblkhd/4rt700t_spec.json',
+    'pline03t': '/chandra_models/xija/pline/pline03t_model_spec.json',
+    'pline04t': '/chandra_models/xija/pline/pline04t_model_spec.json',
+    'pm1thv2t': '/chandra_models/xija/mups_valve/pm1thv2t_spec.json',
+    'pm2thv1t': '/chandra_models/xija/mups_valve/pm2thv1t_spec_matlab.json',
+    '2ceahvpt': '/chandra_models/xija/hrc/cea_spec.json',
+}
 
 
 def get_github_chandra_models_version_info():
@@ -84,27 +100,12 @@ def load_github_model_specs(version='master'):
 
         return json_loads(f), md5_hash
 
-    model_locations = {
-        'aacccdpt': '/chandra_models/xija/aca/aca_spec.json',
-        '1deamzt': '/chandra_models/xija/dea/dea_spec.json',
-        '1dpamzt': '/chandra_models/xija/dpa/dpa_spec.json',
-        'fptemp': '/chandra_models/xija/acisfp/acisfp_spec.json',
-        '1pdeaat': '/chandra_models/xija/psmc/psmc_spec.json',
-        'pftank2t': '/chandra_models/xija/pftank2t/pftank2t_spec.json',
-        '4rt700t': '/chandra_models/xija/fwdblkhd/4rt700t_spec.json',
-        'pline03t': '/chandra_models/xija/pline/pline03t_model_spec.json',
-        'pline04t': '/chandra_models/xija/pline/pline04t_model_spec.json',
-        'pm1thv2t': '/chandra_models/xija/mups_valve/pm1thv2t_spec.json',
-        'pm2thv1t': '/chandra_models/xija/mups_valve/pm2thv1t_spec_matlab.json',
-        '2ceahvpt': '/chandra_models/xija/hrc/cea_spec.json',
-    }
-
     all_versions_info = get_github_chandra_models_version_info()
 
     model_specs = {'sha': all_versions_info[version]['commit']['sha'], 'version_info': all_versions_info[version],
                    'version': version}
 
-    for msid, path in model_locations.items():
+    for msid, path in MODEL_LOCATIONS.items():
         model_specs[msid], model_specs[msid + '_md5'] = get_model(path)
     model_specs['fptemp_11'] = model_specs['fptemp']  # For backwards compatibility
     model_specs['fptemp_11_md5'] = model_specs['fptemp_md5']  # For backwards compatibility
@@ -157,21 +158,6 @@ def load_model_specs(version=None, local_repository_location=None):
         md5_hash = md5(f.encode('utf-8')).hexdigest()
         return json_loads(f), md5_hash
 
-    model_locations = {
-        'aacccdpt': 'chandra_models/xija/aca/aca_spec.json',
-        '1deamzt': 'chandra_models/xija/dea/dea_spec.json',
-        '1dpamzt': 'chandra_models/xija/dpa/dpa_spec.json',
-        'fptemp': 'chandra_models/xija/acisfp/acisfp_spec_matlab.json',
-        '1pdeaat': 'chandra_models/xija/psmc/psmc_spec.json',
-        'pftank2t': 'chandra_models/xija/pftank2t/pftank2t_spec.json',
-        '4rt700t': 'chandra_models/xija/fwdblkhd/4rt700t_spec.json',
-        'pline03t': 'chandra_models/xija/pline/pline03t_model_spec.json',
-        'pline04t': 'chandra_models/xija/pline/pline04t_model_spec.json',
-        'pm1thv2t': 'chandra_models/xija/mups_valve/pm1thv2t_spec.json',
-        'pm2thv1t': 'chandra_models/xija/mups_valve/pm2thv1t_spec_matlab.json',
-        '2ceahvpt': 'chandra_models/xija/hrc/cea_spec.json',
-    }
-
     if local_repository_location is None:
         local_repository_location = get_model_spec.REPO_PATH
     else:
@@ -183,7 +169,7 @@ def load_model_specs(version=None, local_repository_location=None):
             _ = repo.git.checkout(version)
         model_specs = get_local_git_version_info(repo)
 
-        for msid, path in model_locations.items():
+        for msid, path in MODEL_LOCATIONS.items():
             model_specs[msid], model_specs[msid + '_md5'] = get_model(path)
         model_specs['fptemp_11'] = model_specs['fptemp']  # For backwards compatibility
         model_specs['fptemp_11_md5'] = model_specs['fptemp_md5']  # For backwards compatibility
