@@ -29,18 +29,18 @@ NON_STATE_NAMES = {'aacccdpt': ['aca0', ],
                    '2ceahvpt': ['cea0', 'cea1']}
 
 MODEL_LOCATIONS = {
-    'aacccdpt': '/chandra_models/xija/aca/aca_spec.json',
-    '1deamzt': '/chandra_models/xija/dea/dea_spec.json',
-    '1dpamzt': '/chandra_models/xija/dpa/dpa_spec.json',
-    'fptemp': '/chandra_models/xija/acisfp/acisfp_spec.json',
-    '1pdeaat': '/chandra_models/xija/psmc/psmc_spec.json',
-    'pftank2t': '/chandra_models/xija/pftank2t/pftank2t_spec.json',
-    '4rt700t': '/chandra_models/xija/fwdblkhd/4rt700t_spec.json',
-    'pline03t': '/chandra_models/xija/pline/pline03t_model_spec.json',
-    'pline04t': '/chandra_models/xija/pline/pline04t_model_spec.json',
-    'pm1thv2t': '/chandra_models/xija/mups_valve/pm1thv2t_spec.json',
-    'pm2thv1t': '/chandra_models/xija/mups_valve/pm2thv1t_spec_matlab.json',
-    '2ceahvpt': '/chandra_models/xija/hrc/cea_spec.json',
+    'aacccdpt': 'chandra_models/xija/aca/aca_spec.json',
+    '1deamzt': 'chandra_models/xija/dea/dea_spec.json',
+    '1dpamzt': 'chandra_models/xija/dpa/dpa_spec.json',
+    'fptemp': 'chandra_models/xija/acisfp/acisfp_spec.json',
+    '1pdeaat': 'chandra_models/xija/psmc/psmc_spec.json',
+    'pftank2t': 'chandra_models/xija/pftank2t/pftank2t_spec.json',
+    '4rt700t': 'chandra_models/xija/fwdblkhd/4rt700t_spec.json',
+    'pline03t': 'chandra_models/xija/pline/pline03t_model_spec.json',
+    'pline04t': 'chandra_models/xija/pline/pline04t_model_spec.json',
+    'pm1thv2t': 'chandra_models/xija/mups_valve/pm1thv2t_spec.json',
+    'pm2thv1t': 'chandra_models/xija/mups_valve/pm2thv1t_spec_matlab.json',
+    '2ceahvpt': 'chandra_models/xija/hrc/cea_spec.json',
 }
 
 
@@ -106,7 +106,7 @@ def load_github_model_specs(version='master'):
                    'version': version}
 
     for msid, path in MODEL_LOCATIONS.items():
-        model_specs[msid], model_specs[msid + '_md5'] = get_model(path)
+        model_specs[msid], model_specs[msid + '_md5'] = get_model('/' + path)
     model_specs['fptemp_11'] = model_specs['fptemp']  # For backwards compatibility
     model_specs['fptemp_11_md5'] = model_specs['fptemp_md5']  # For backwards compatibility
 
