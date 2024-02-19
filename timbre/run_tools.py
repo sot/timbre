@@ -7,7 +7,9 @@ from os.path import expanduser
 from multiprocessing import Pool, Manager
 from copy import copy
 
-from timbre import Composite, DEFAULT_ANCHORS, get_local_model, Balance2CEAHVPT
+from timbre import Composite, DEFAULT_ANCHORS, get_local_model, get_limited_results, get_offset_results, load_model_specs
+from .balance import Balance2CEAHVPT, BalanceAACCCDPT, Balance4RT700T, BalancePFTANK2T, BalancePLINE03T,\
+    BalancePLINE04T, BalancePM1THV2T, BalancePM2THV1T, Balance1DPAMZT, Balance1DEAMZT, Balance1PDEAAT, BalanceFPTEMP_11
 
 home = expanduser("~")
 
@@ -16,7 +18,7 @@ INPUT_COLUMNS = ['fptemp_11_limit', '1dpamzt_limit', '1deamzt_limit', '1pdeaat_l
                  'pline04t_limit', 'date', 'datesecs', 'dwell_type', 'roll', 'chips', 'pitch']
 
 
-def add_inputs(p, limits, date, dwell_type, roll, chips):
+def add_inputs(p, limits, date, dwell_type, roll, chips, pitch_range=range(45, 181, 1)):
     """
     Add input data to Timbre coposite results.
 
@@ -36,6 +38,10 @@ def add_inputs(p, limits, date, dwell_type, roll, chips):
     :returns: Pandas Dataframe of results data with associated simulation input data
     :rtype: pd.DataFrame
     """
+
+    if p is None:
+        p = pd.DataFrame(index=pitch_range, columns=DEFAULT_ANCHORS.keys())
+
     for msid, limit in limits.items():
         if 'limit' not in msid:
             p[msid + '_limit'] = float(limit)
@@ -50,6 +56,93 @@ def add_inputs(p, limits, date, dwell_type, roll, chips):
     p.reset_index(inplace=True)
     p = p.rename(columns={'index': 'pitch'})
     return p
+
+
+class Queue(object):
+    """ Queue object for multiprocessing """
+
+    def __init__(self, input_sets, num_cases, cpu_count, filename):
+        """
+        Initialize Queue object
+        :param input_sets: Cases to be run
+        :type input_sets: list
+        :param num_cases: Number of cases to process
+        :type num_cases: int
+        :param cpu_count: Number of CPUs to use
+        :type cpu_count: int
+        :param filename: Results output file name
+        :type filename: str
+
+        """
+
+        self.input_sets = input_sets
+        self.num_cases = num_cases if num_cases is not None else len(input_sets)
+        self.cpu_count = cpu_count
+        self.filename = filename
+
+    def _listener(self, q):
+        """ Listen for messages on the q, write results to file.
+
+        :param q: Queue object
+        :type q: mulitprocessing.Manager.Queue
+
+        """
+
+        with open(self.filename, 'w') as fid:
+            while 1:
+                m = q.get()
+                if m == 'kill':
+                    break
+                fid.write(m)
+                fid.flush()
+
+    def _worker(self, data, q):
+        """ Run a case and post the results to the queue
+
+        :param arg: Input arguments to run case
+        :type arg: iterable
+        :param kwarg: Input keyword arguments to run case
+        :type kwarg: dict
+        :param q: Queue object
+        :type q: multiprocessing.Manager.Queue
+        """
+
+        res = self.run_case(data)
+        q.put(res)
+        return res
+
+    def _build_and_run_queue(self):
+
+        manager = Manager()
+        q = manager.Queue()
+        pool = Pool(self.cpu_count)
+
+        # put listener to work first
+        watcher = pool.apply_async(self._listener, (q, ))
+
+        # start workers
+        jobs = []
+        for n, input_set in self.input_sets.iterrows():
+            if n > self.num_cases:
+                break
+            arg = input_set
+            job = pool.apply_async(self._worker, (arg, q))
+            jobs.append(job)
+
+        # collect results from the workers through the pool result queue
+        for job in jobs:
+            job.get()
+
+        # now we are done, kill the listener
+        q.put('kill')
+        pool.close()
+        pool.join()
+
+    def run_case(self, data):
+        raise NotImplementedError
+
+    def run_all(self, ):
+        self._build_and_run_queue()
 
 
 def run_instance(date, chips, limits, roll, max_dwell, pitch_step, model_specs=None, anchors=None, maneuvers=False):
@@ -495,3 +588,375 @@ def run_hrc_estimate(date, cea_model_spec, limit, constant_conditions, custom_of
                                                          pitch_range)
 
     return model.results
+
+
+class ManeuverImpactQueue(Queue):
+    """ Queue object for multiprocessing """
+    def __init__(self, all_results, output_filename, cpu_count=2, num_cases=None, anchors=DEFAULT_ANCHORS):
+        """
+        Initialize Queue object
+        :param all_results: Timbre results
+        :type all_results: ndarray
+        :param cpu_count: Number of CPUs to use
+        :type cpu_count: int
+        :param num_cases: Number of cases to process
+        :type num_cases: int
+        :param output_filename: Results output file name
+        :type output_filename: str
+
+        """
+        input_sets = find_inputs_from_results(all_results)
+        self.all_results_indexed = all_results.set_index(INPUT_COLUMNS)
+        self.anchors = anchors
+        self.pitch_range = np.arange(45, 181, 1)
+        self.model_specs = load_model_specs(local_repository_location=home + "/AXAFLIB/chandra_models")
+        self.msids = list(self.anchors.keys())
+        self.print_header = True
+        self.base_dtype = [('msid', 'U20'),
+                          ('date', 'U8'),
+                          ('datesecs', float),
+                          ('limit', float),
+                          ('t_dwell1', float),
+                          ('t_dwell2', float),
+                          ('min_temp', float),
+                          ('mean_temp', float),
+                          ('max_temp', float),
+                          ('min_pseudo', float),
+                          ('mean_pseudo', float),
+                          ('max_pseudo', float),
+                          ('converged', bool),
+                          ('unconverged_hot', bool),
+                          ('unconverged_cold', bool),
+                          ('hotter_state', np.int8),
+                          ('colder_state', np.int8)]
+
+        super().__init__(input_sets, num_cases, cpu_count, output_filename)
+
+    def run_case(self, index):
+        limits = {msid: limit for msid, limit in index.items() if 'limit' in msid}
+
+        limited_results = pd.DataFrame(index=self.pitch_range, columns=self.msids)
+        offset_results = pd.DataFrame(index=self.pitch_range, columns=self.msids)
+
+        limited_results = add_inputs(limited_results, limits, index["date"], 'limit', index["roll"],
+                                     index["chips"], pitch_range=self.pitch_range)
+        offset_results = add_inputs(offset_results, limits, index["date"], 'offset', index["roll"],
+                                    index["chips"], pitch_range=self.pitch_range)
+
+        # The add_inputs() function removes pitch as the index, add it back.
+        limited_results.set_index('pitch', inplace=True)
+        offset_results.set_index('pitch', inplace=True)
+
+        lim, off = self.calc_aca_dwells_with_maneuvers(index)
+        limited_results.loc[lim["pitch2"], "aacccdpt"] = lim['t_dwell2']
+        offset_results.loc[off["pitch2"], "aacccdpt"] = off['t_dwell2']
+
+        lim, off = self.calc_oba_dwells_with_maneuvers(index)
+        limited_results.loc[lim["pitch2"], "4rt700t"] = lim['t_dwell2']
+        offset_results.loc[off["pitch2"], "4rt700t"] = off['t_dwell2']
+
+        lim, off = self.calc_tank_dwells_with_maneuvers(index)
+        limited_results.loc[lim["pitch2"], "pline03t"] = lim['t_dwell2']
+        offset_results.loc[off["pitch2"], "pline03t"] = off['t_dwell2']
+
+        lim, off = self.calc_pline04t_dwells_with_maneuvers(index)
+        limited_results.loc[lim["pitch2"], "pline04t"] = lim['t_dwell2']
+        offset_results.loc[off["pitch2"], "pline04t"] = off['t_dwell2']
+
+        lim, off = self.calc_mups1b_dwells_with_maneuvers(index)
+        limited_results.loc[lim["pitch2"], "pm1thv2t"] = lim['t_dwell2']
+        offset_results.loc[off["pitch2"], "pm1thv2t"] = off['t_dwell2']
+
+        lim, off = self.calc_mups2a_dwells_with_maneuvers(index)
+        limited_results.loc[lim["pitch2"], "pm2thv1t"] = lim['t_dwell2']
+        offset_results.loc[off["pitch2"], "pm2thv1t"] = off['t_dwell2']
+
+        lim, off = self.calc_tank_dwells_with_maneuvers(index)
+        limited_results.loc[lim["pitch2"], "pftank2t"] = lim['t_dwell2']
+        offset_results.loc[off["pitch2"], "pftank2t"] = off['t_dwell2']
+
+        lim, off = self.calc_dpa_dwells_with_maneuvers(index)
+        limited_results.loc[lim["pitch2"], "1dpamzt"] = lim['t_dwell2']
+        offset_results.loc[off["pitch2"], "1dpamzt"] = off['t_dwell2']
+
+        lim, off = self.calc_dea_dwells_with_maneuvers(index)
+        limited_results.loc[lim["pitch2"], "1deamzt"] = lim['t_dwell2']
+        offset_results.loc[off["pitch2"], "1deamzt"] = off['t_dwell2']
+
+        lim, off = self.calc_psmc_dwells_with_maneuvers(index)
+        limited_results.loc[lim["pitch2"], "1pdeaat"] = lim['t_dwell2']
+        offset_results.loc[off["pitch2"], "1pdeaat"] = off['t_dwell2']
+
+        lim, off = self.calc_acisfp_dwells_with_maneuvers(index)
+        limited_results.loc[lim["pitch2"], "fptemp_11"] = lim['t_dwell2']
+        offset_results.loc[off["pitch2"], "fptemp_11"] = off['t_dwell2']
+
+        data = pd.concat([limited_results, offset_results])
+
+        data = data.to_csv(index=False, header=self.print_header)
+        self.print_header = False
+
+        return data
+
+    def calc_timbre_results_with_maneuvers(self, BalanceClass, msid, index, constant_conditions):
+        index_copy = copy(index)
+        datesecs = CxoTime(index["date"]).secs
+
+        limit = index[msid + "_limit"]
+        limited_pitch = self.anchors[msid]['anchor_limited_pitch']
+        offset_pitch = self.anchors[msid]['anchor_offset_pitch']
+
+        index_copy["pitch"] = offset_pitch
+        composite_limit_at_offset_pitch = self.all_results_indexed.loc[tuple(index_copy)].min()
+        print(composite_limit_at_offset_pitch)
+
+        if constant_conditions is None:
+            constant_conditions = {}
+
+        model_class_instance = BalanceClass(datesecs, self.model_specs[msid], limit, constant_conditions, maneuvers=True)
+        model_class_instance.find_anchor_condition(offset_pitch, limited_pitch, composite_limit_at_offset_pitch,
+                                                   limit)
+
+        if np.isnan(model_class_instance.anchor_limited_time):
+            dtype = [('pitch2', int), ('t_dwell2', float)]
+            limited_results = np.array(list(zip(self.pitch_range, [np.nan, ] * len(self.pitch_range))), dtype=dtype)
+            offset_results = np.array(list(zip(self.pitch_range, [np.nan, ] * len(self.pitch_range))), dtype=dtype)
+
+        else:
+            output = model_class_instance.generate_balanced_pitch_dwells(
+                datesecs,
+                limited_pitch,
+                model_class_instance.anchor_limited_time,
+                offset_pitch,
+                model_class_instance.anchor_offset_time,
+                limit,
+                self.pitch_range,
+            )
+
+            limited_results = get_limited_results(output, self.anchors[msid]["anchor_offset_pitch"])
+            offset_results = get_offset_results(output, self.anchors[msid]["anchor_limited_pitch"])
+
+        return limited_results, offset_results
+
+    def calc_aca_dwells_with_maneuvers(self, index):
+        msid = "aacccdpt"
+        BalanceClass = BalanceAACCCDPT
+        init = {}
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+
+    def calc_oba_dwells_with_maneuvers(self, index):
+        msid = "4rt700t"
+        BalanceClass = Balance4RT700T
+        init = {}
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+
+    def calc_tank_dwells_with_maneuvers(self, index):
+        msid = "pftank2t"
+        roll = index["roll"]
+        BalanceClass = BalancePFTANK2T
+        init = {"roll": roll, }
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+
+    def calc_pline03t_dwells_with_maneuvers(self, index):
+        msid = "pline03t"
+        roll = index["roll"]
+        BalanceClass = BalancePLINE03T
+        init = {"roll": roll, }
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+
+    def calc_pline04t_dwells_with_maneuvers(self, index):
+        msid = "pline04t"
+        roll = index["roll"]
+        BalanceClass = BalancePLINE04T
+        init = {"roll": roll, }
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+
+    def calc_mups1b_dwells_with_maneuvers(self, index):
+        msid = "pm1thv2t"
+        roll = index["roll"]
+        BalanceClass = BalancePM1THV2T
+        init = {"roll": roll, }
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+
+    def calc_mups2a_dwells_with_maneuvers(self, index):
+        msid = "pm2thv1t"
+        roll = index["roll"]
+        BalanceClass = BalancePM2THV1T
+        init = {"roll": roll, }
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+
+    def calc_dpa_dwells_with_maneuvers(self, index):
+        msid = "1dpamzt"
+        roll = index["roll"]
+        BalanceClass = Balance1DPAMZT
+
+        if index['fptemp_11_limit'] > -90:
+            ccds=0
+            feps=3
+            sim_z = -99616
+        else:
+            ccds = index["chips"]
+            feps = index["chips"]
+            sim_z = 100000
+
+        init = {'roll': roll, 'fep_count': feps, 'ccd_count': ccds, 'clocking': True, 'vid_board': True,
+                'sim_z': sim_z}
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+
+    def calc_dea_dwells_with_maneuvers(self, index):
+        msid = "1deamzt"
+        roll = index["roll"]
+        BalanceClass = Balance1DEAMZT
+
+        if index['fptemp_11_limit'] > -90:
+            ccds=0
+            feps=3
+            sim_z = -99616
+        else:
+            ccds = index["chips"]
+            feps = index["chips"]
+            sim_z = 100000
+
+        init = {'roll': roll, 'fep_count': feps, 'ccd_count': ccds, 'clocking': True, 'vid_board': True,
+                'sim_z': sim_z}
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+
+    def calc_acisfp_dwells_with_maneuvers(self, index):
+        msid = "fptemp_11"
+        roll = index["roll"]
+        BalanceClass = BalanceFPTEMP_11
+
+        if index['fptemp_11_limit'] > -90:
+            ccds=0
+            feps=3
+            sim_z = -99616
+        else:
+            ccds = index["chips"]
+            feps = index["chips"]
+            sim_z = 100000
+
+        init = {'roll': roll, 'fep_count': feps, 'ccd_count': ccds, 'clocking': True, 'vid_board': True,
+                'sim_z': sim_z}
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+
+    def calc_psmc_dwells_with_maneuvers(self, index):
+        msid = "1pdeaat"
+        roll = index["roll"]
+        BalanceClass = Balance1PDEAAT
+
+        if index['fptemp_11_limit'] > -90:
+            ccds=0
+            feps=3
+            sim_z = -99616
+        else:
+            ccds = index["chips"]
+            feps = index["chips"]
+            sim_z = 100000
+
+        init = {'roll': roll, 'fep_count': feps, 'ccd_count': ccds, 'clocking': True, 'vid_board': True,
+                'sim_z': sim_z, 'dh_heater': False}
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+
+
+# def process_queue_maneuver_impact(all_results, filename, anchors=None, cpu_count=2):
+#
+#     inputs = find_inputs_from_results(all_results, pitch=90)
+#     indexed_results = all_results.set_index(INPUT_COLUMNS)
+#
+#     msid = '2ceahvpt'
+#
+#     if anchors is None:
+#         anchors = DEFAULT_ANCHORS
+#
+#     manager = Manager()
+#     q = manager.Queue()
+#     pool = Pool(cpu_count)
+#
+#     # put listener to work first
+#     watcher = pool.apply_async(_listener, (filename, q,))
+#
+#     # start workers
+#     jobs = []
+#     num_cases = len(inputs)
+#     for case_num, index in inputs.iterrows():
+#
+#         input_case = inputs.iloc[case_num]
+#         date = input_case['date']
+#
+#
+#
+#         composite_case = indexed_results.loc[tuple(inputs.iloc[case_num].values[:-1])].min(axis=1)
+#         anchor_offset_time = composite_case.loc[anchor_offset_pitch]
+#
+#         arg = (input_case, cea_model_spec, limit, constant_conditions, custom_offset_conditions,
+#                custom_limited_conditions, anchor_offset_pitch, anchor_limited_pitch, anchor_offset_time, pitch_range,
+#                case_num, num_cases, maneuvers)
+#         job = pool.apply_async(_worker_hrc, (arg, q))
+#         jobs.append(job)
+#
+#     # collect results from the workers through the pool result queue
+#     for job in jobs:
+#         job.get()
+#
+#     # now we are done, kill the listener
+#     q.put('kill')
+#     pool.close()
+#     pool.join()
+
+
+
+
+
+
+# def calc_maneuver_impact(all_results, anchors=DEFAULT_ANCHORS):
+#
+#     models = load_model_specs(local_repository_location="/Users/matthewdahmer/AXAFLIB/chandra_models")
+#
+#     input_cases = find_inputs_from_results(all_results)
+#     all_results_indexed = all_results.set_index(INPUT_COLUMNS)
+#
+#     results = []
+#     for index_num, index in input_cases.iterrows():
+#
+#         limits = {msid: limit for msid, limit in index.items() if 'limit' in msid}
+#         msids = limits.keys()
+#
+#         limited_results_df = pd.DataFrame(index=range(45, 181, 1), columns=msids)
+#         offset_results_df = pd.DataFrame(index=range(45, 181, 1), columns=msids)
+#
+#         chips = index["chips"]
+#
+#         aca_results = calc_aca_dwells_with_maneuvers(index, all_results_indexed, models["aacccdpt"], anchors)
+#         oba_results = calc_oba_dwells_with_maneuvers(index, all_results_indexed, models["4rt700t"], anchors)
+#         pline03t_results = calc_pline03t_dwells_with_maneuvers(index, all_results_indexed, models["pline03t"], anchors)
+#         pline04t_results = calc_pline04t_dwells_with_maneuvers(index, all_results_indexed, models["pline04t"], anchors)
+#         mups1b_results = calc_mups1b_dwells_with_maneuvers(index, all_results_indexed, models["pm1thv2t"], anchors)
+#         mups2a_results = calc_mups2a_dwells_with_maneuvers(index, all_results_indexed, models["pm2thv1t"], anchors)
+#         tank_results = calc_tank_dwells_with_maneuvers(index, all_results_indexed, models["pftank2t"], anchors)
+#         dpa_results = calc_dpa_dwells_with_maneuvers(index, all_results_indexed, models["1dpamzt"], anchors, chips=chips)
+#         dea_results = calc_dea_dwells_with_maneuvers(index, all_results_indexed, models["1deamzt"], anchors, chips=chips)
+#         psmc_results = calc_psmc_dwells_with_maneuvers(index, all_results_indexed, models["1pdeaat"], anchors, chips=chips)
+#         acisfp_results = calc_acisfp_dwells_with_maneuvers(index, all_results_indexed, models["fptemp_11"], anchors, chips=chips)
+#
+#         results.append(aca_results)
+#         print(index_num)
+#
+#         if index_num == 0:
+#             break
+
+
+    # limited_results_df = pd.DataFrame(index=range(45, 181, 1), columns=msids)
+    # offset_results_df = pd.DataFrame(index=range(45, 181, 1), columns=msids)
+    #
+    # limited_results = get_limited_results(output, anchors[msid]["anchor_offset_pitch"])
+    # offset_results = get_offset_results(output, anchors[msid]["anchor_limited_pitch"])
+    #
+    # limits = {msid: limit for msid, limit in index.items() if 'limit' in msid}
+    #
+    # t_limit = add_inputs(limited_results_df, limits, index["date"], 'limit', index["roll"], index["chips"])
+    # t_offset = add_inputs(offset_results_df, limits, index["date"], 'offset', index["roll"], index["chips"])
+    # data = pd.concat([t_limit, t_offset])
+
+
+
+
