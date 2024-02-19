@@ -75,7 +75,6 @@ class Queue(object):
 
         """
 
-        self.input_sets = input_sets
         self.num_cases = num_cases if num_cases is not None else len(input_sets)
         self.cpu_count = cpu_count
         self.filename = filename
@@ -107,7 +106,8 @@ class Queue(object):
         :type q: multiprocessing.Manager.Queue
         """
 
-        res = self.run_case(data)
+        input_case, n = data
+        res = self.run_case(input_case, n)
         q.put(res)
         return res
 
@@ -125,7 +125,7 @@ class Queue(object):
         for n, input_set in self.input_sets.iterrows():
             if n > self.num_cases:
                 break
-            arg = input_set
+            arg = input_set, n
             job = pool.apply_async(self._worker, (arg, q))
             jobs.append(job)
 
@@ -592,11 +592,15 @@ def run_hrc_estimate(date, cea_model_spec, limit, constant_conditions, custom_of
 
 class ManeuverImpactQueue(Queue):
     """ Queue object for multiprocessing """
-    def __init__(self, all_results, output_filename, cpu_count=2, num_cases=None, anchors=DEFAULT_ANCHORS):
+    def __init__(self, input_sets, composite_limit, output_filename, cpu_count=2, num_cases=None, anchors=DEFAULT_ANCHORS):
         """
         Initialize Queue object
-        :param all_results: Timbre results
-        :type all_results: ndarray
+        :param input_sets: Cases to be run
+        :type input_sets: Pandas DataFrame
+        :param composite_limit: Composite limit for all MSIDs
+        :type composite_limit: list
+        :output_filename: Results output file name
+        :type output_filename: str
         :param cpu_count: Number of CPUs to use
         :type cpu_count: int
         :param num_cases: Number of cases to process
@@ -605,34 +609,34 @@ class ManeuverImpactQueue(Queue):
         :type output_filename: str
 
         """
-        input_sets = find_inputs_from_results(all_results)
-        self.all_results_indexed = all_results.set_index(INPUT_COLUMNS)
+        self.input_sets = input_sets
+        self.composite_limit = composite_limit
         self.anchors = anchors
         self.pitch_range = np.arange(45, 181, 1)
         self.model_specs = load_model_specs(local_repository_location=home + "/AXAFLIB/chandra_models")
         self.msids = list(self.anchors.keys())
         self.print_header = True
-        self.base_dtype = [('msid', 'U20'),
-                          ('date', 'U8'),
-                          ('datesecs', float),
-                          ('limit', float),
-                          ('t_dwell1', float),
-                          ('t_dwell2', float),
-                          ('min_temp', float),
-                          ('mean_temp', float),
-                          ('max_temp', float),
-                          ('min_pseudo', float),
-                          ('mean_pseudo', float),
-                          ('max_pseudo', float),
-                          ('converged', bool),
-                          ('unconverged_hot', bool),
-                          ('unconverged_cold', bool),
-                          ('hotter_state', np.int8),
-                          ('colder_state', np.int8)]
+        # self.base_dtype = [('msid', 'U20'),
+        #                   ('date', 'U8'),
+        #                   ('datesecs', float),
+        #                   ('limit', float),
+        #                   ('t_dwell1', float),
+        #                   ('t_dwell2', float),
+        #                   ('min_temp', float),
+        #                   ('mean_temp', float),
+        #                   ('max_temp', float),
+        #                   ('min_pseudo', float),
+        #                   ('mean_pseudo', float),
+        #                   ('max_pseudo', float),
+        #                   ('converged', bool),
+        #                   ('unconverged_hot', bool),
+        #                   ('unconverged_cold', bool),
+        #                   ('hotter_state', np.int8),
+        #                   ('colder_state', np.int8)]
 
         super().__init__(input_sets, num_cases, cpu_count, output_filename)
 
-    def run_case(self, index):
+    def run_case(self, index, n):
         limits = {msid: limit for msid, limit in index.items() if 'limit' in msid}
 
         limited_results = pd.DataFrame(index=self.pitch_range, columns=self.msids)
@@ -647,47 +651,47 @@ class ManeuverImpactQueue(Queue):
         limited_results.set_index('pitch', inplace=True)
         offset_results.set_index('pitch', inplace=True)
 
-        lim, off = self.calc_aca_dwells_with_maneuvers(index)
+        lim, off = self.calc_aca_dwells_with_maneuvers(index, n)
         limited_results.loc[lim["pitch2"], "aacccdpt"] = lim['t_dwell2']
         offset_results.loc[off["pitch2"], "aacccdpt"] = off['t_dwell2']
 
-        lim, off = self.calc_oba_dwells_with_maneuvers(index)
+        lim, off = self.calc_oba_dwells_with_maneuvers(index, n)
         limited_results.loc[lim["pitch2"], "4rt700t"] = lim['t_dwell2']
         offset_results.loc[off["pitch2"], "4rt700t"] = off['t_dwell2']
 
-        lim, off = self.calc_tank_dwells_with_maneuvers(index)
+        lim, off = self.calc_tank_dwells_with_maneuvers(index, n)
         limited_results.loc[lim["pitch2"], "pline03t"] = lim['t_dwell2']
         offset_results.loc[off["pitch2"], "pline03t"] = off['t_dwell2']
 
-        lim, off = self.calc_pline04t_dwells_with_maneuvers(index)
+        lim, off = self.calc_pline04t_dwells_with_maneuvers(index, n)
         limited_results.loc[lim["pitch2"], "pline04t"] = lim['t_dwell2']
         offset_results.loc[off["pitch2"], "pline04t"] = off['t_dwell2']
 
-        lim, off = self.calc_mups1b_dwells_with_maneuvers(index)
+        lim, off = self.calc_mups1b_dwells_with_maneuvers(index, n)
         limited_results.loc[lim["pitch2"], "pm1thv2t"] = lim['t_dwell2']
         offset_results.loc[off["pitch2"], "pm1thv2t"] = off['t_dwell2']
 
-        lim, off = self.calc_mups2a_dwells_with_maneuvers(index)
+        lim, off = self.calc_mups2a_dwells_with_maneuvers(index, n)
         limited_results.loc[lim["pitch2"], "pm2thv1t"] = lim['t_dwell2']
         offset_results.loc[off["pitch2"], "pm2thv1t"] = off['t_dwell2']
 
-        lim, off = self.calc_tank_dwells_with_maneuvers(index)
+        lim, off = self.calc_tank_dwells_with_maneuvers(index, n)
         limited_results.loc[lim["pitch2"], "pftank2t"] = lim['t_dwell2']
         offset_results.loc[off["pitch2"], "pftank2t"] = off['t_dwell2']
 
-        lim, off = self.calc_dpa_dwells_with_maneuvers(index)
+        lim, off = self.calc_dpa_dwells_with_maneuvers(index, n)
         limited_results.loc[lim["pitch2"], "1dpamzt"] = lim['t_dwell2']
         offset_results.loc[off["pitch2"], "1dpamzt"] = off['t_dwell2']
 
-        lim, off = self.calc_dea_dwells_with_maneuvers(index)
+        lim, off = self.calc_dea_dwells_with_maneuvers(index, n)
         limited_results.loc[lim["pitch2"], "1deamzt"] = lim['t_dwell2']
         offset_results.loc[off["pitch2"], "1deamzt"] = off['t_dwell2']
 
-        lim, off = self.calc_psmc_dwells_with_maneuvers(index)
+        lim, off = self.calc_psmc_dwells_with_maneuvers(index, n)
         limited_results.loc[lim["pitch2"], "1pdeaat"] = lim['t_dwell2']
         offset_results.loc[off["pitch2"], "1pdeaat"] = off['t_dwell2']
 
-        lim, off = self.calc_acisfp_dwells_with_maneuvers(index)
+        lim, off = self.calc_acisfp_dwells_with_maneuvers(index, n)
         limited_results.loc[lim["pitch2"], "fptemp_11"] = lim['t_dwell2']
         offset_results.loc[off["pitch2"], "fptemp_11"] = off['t_dwell2']
 
@@ -698,7 +702,7 @@ class ManeuverImpactQueue(Queue):
 
         return data
 
-    def calc_timbre_results_with_maneuvers(self, BalanceClass, msid, index, constant_conditions):
+    def calc_timbre_results_with_maneuvers(self, BalanceClass, msid, index, n, constant_conditions):
         index_copy = copy(index)
         datesecs = CxoTime(index["date"]).secs
 
@@ -707,7 +711,7 @@ class ManeuverImpactQueue(Queue):
         offset_pitch = self.anchors[msid]['anchor_offset_pitch']
 
         index_copy["pitch"] = offset_pitch
-        composite_limit_at_offset_pitch = self.all_results_indexed.loc[tuple(index_copy)].min()
+        composite_limit_at_offset_pitch = self.composite_limit[n]
         print(composite_limit_at_offset_pitch)
 
         if constant_conditions is None:
@@ -738,54 +742,54 @@ class ManeuverImpactQueue(Queue):
 
         return limited_results, offset_results
 
-    def calc_aca_dwells_with_maneuvers(self, index):
+    def calc_aca_dwells_with_maneuvers(self, index, n):
         msid = "aacccdpt"
         BalanceClass = BalanceAACCCDPT
         init = {}
-        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, n, init)
 
-    def calc_oba_dwells_with_maneuvers(self, index):
+    def calc_oba_dwells_with_maneuvers(self, index, n):
         msid = "4rt700t"
         BalanceClass = Balance4RT700T
         init = {}
-        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, n, init)
 
-    def calc_tank_dwells_with_maneuvers(self, index):
+    def calc_tank_dwells_with_maneuvers(self, index, n):
         msid = "pftank2t"
         roll = index["roll"]
         BalanceClass = BalancePFTANK2T
         init = {"roll": roll, }
-        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, n, init)
 
-    def calc_pline03t_dwells_with_maneuvers(self, index):
+    def calc_pline03t_dwells_with_maneuvers(self, index, n):
         msid = "pline03t"
         roll = index["roll"]
         BalanceClass = BalancePLINE03T
         init = {"roll": roll, }
-        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, n, init)
 
-    def calc_pline04t_dwells_with_maneuvers(self, index):
+    def calc_pline04t_dwells_with_maneuvers(self, index, n):
         msid = "pline04t"
         roll = index["roll"]
         BalanceClass = BalancePLINE04T
         init = {"roll": roll, }
-        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, n, init)
 
-    def calc_mups1b_dwells_with_maneuvers(self, index):
+    def calc_mups1b_dwells_with_maneuvers(self, index, n):
         msid = "pm1thv2t"
         roll = index["roll"]
         BalanceClass = BalancePM1THV2T
         init = {"roll": roll, }
-        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, n, init)
 
-    def calc_mups2a_dwells_with_maneuvers(self, index):
+    def calc_mups2a_dwells_with_maneuvers(self, index, n):
         msid = "pm2thv1t"
         roll = index["roll"]
         BalanceClass = BalancePM2THV1T
         init = {"roll": roll, }
-        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, n, init)
 
-    def calc_dpa_dwells_with_maneuvers(self, index):
+    def calc_dpa_dwells_with_maneuvers(self, index, n):
         msid = "1dpamzt"
         roll = index["roll"]
         BalanceClass = Balance1DPAMZT
@@ -801,9 +805,9 @@ class ManeuverImpactQueue(Queue):
 
         init = {'roll': roll, 'fep_count': feps, 'ccd_count': ccds, 'clocking': True, 'vid_board': True,
                 'sim_z': sim_z}
-        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, n, init)
 
-    def calc_dea_dwells_with_maneuvers(self, index):
+    def calc_dea_dwells_with_maneuvers(self, index, n):
         msid = "1deamzt"
         roll = index["roll"]
         BalanceClass = Balance1DEAMZT
@@ -819,9 +823,9 @@ class ManeuverImpactQueue(Queue):
 
         init = {'roll': roll, 'fep_count': feps, 'ccd_count': ccds, 'clocking': True, 'vid_board': True,
                 'sim_z': sim_z}
-        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, n, init)
 
-    def calc_acisfp_dwells_with_maneuvers(self, index):
+    def calc_acisfp_dwells_with_maneuvers(self, index, n):
         msid = "fptemp_11"
         roll = index["roll"]
         BalanceClass = BalanceFPTEMP_11
@@ -837,9 +841,9 @@ class ManeuverImpactQueue(Queue):
 
         init = {'roll': roll, 'fep_count': feps, 'ccd_count': ccds, 'clocking': True, 'vid_board': True,
                 'sim_z': sim_z}
-        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, n, init)
 
-    def calc_psmc_dwells_with_maneuvers(self, index):
+    def calc_psmc_dwells_with_maneuvers(self, index, n):
         msid = "1pdeaat"
         roll = index["roll"]
         BalanceClass = Balance1PDEAAT
@@ -855,7 +859,7 @@ class ManeuverImpactQueue(Queue):
 
         init = {'roll': roll, 'fep_count': feps, 'ccd_count': ccds, 'clocking': True, 'vid_board': True,
                 'sim_z': sim_z, 'dh_heater': False}
-        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, init)
+        return self.calc_timbre_results_with_maneuvers(BalanceClass, msid, index, n, init)
 
 
 # def process_queue_maneuver_impact(all_results, filename, anchors=None, cpu_count=2):
