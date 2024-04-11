@@ -649,5 +649,5 @@ class Composite(object):
         self.balance_model('pline04t', self.pline04t)
 
         dashes = ''.join(["-", ] * 120)
-        s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].iteritems()])
+        s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].items()])
         print(f'{dashes}\nFinal Dwell Limits: \n  Pitch    Duration\n{s}\n')
