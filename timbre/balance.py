@@ -599,7 +599,7 @@ class Composite(object):
         self.balance_model('pline03t', self.pline03t)
         self.balance_model('pline04t', self.pline04t)
 
-        s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].iteritems()])
+        s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].items()])
         print(f'Approximate dwell limits calculated by this iteration: \n  Pitch    Duration\n{s}')
 
         final_dwell_limits = copy.copy(self.dwell_limits.loc[self.pitch_range])
