@@ -9,6 +9,7 @@ import json
 from git import Repo
 import numpy as np # noqa
 from scipy import interpolate # noqa
+# from memory_profiler import profile
 
 from cxotime import CxoTime
 import xija
@@ -743,6 +744,7 @@ def _refine_dwell2_time(limit_type, n_dwells, min_dwell, max_dwell, limit, opt_f
     return results, output
 
 
+# @profile
 def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state_pairs, limit_type='max',
                     min_dwell=None, max_dwell=None, n_dwells=10, print_progress=True, maneuvers=False,
                     shared_data=None):
@@ -808,10 +810,8 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                        ({'pitch': 75}, {'pitch': 130}),
                        ({'pitch': 170}, {'pitch': 90}),
                        ({'pitch': 90}, {'pitch': 170}))
-        state_pair_dtype = {'pitch', float}
 
-        results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs,
-            state_pair_dtype)
+        results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs)
     """
 
     non_state_names = {'aacccdpt': ['aca0', ],
