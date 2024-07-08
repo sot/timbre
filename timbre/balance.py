@@ -75,7 +75,7 @@ class Balance(object):
     """
 
     def __init__(self, date, model_spec, limit, constant_conditions, margin_factor, offset_conditions=None,
-                 limited_conditions=None):
+                 limited_conditions=None, maneuvers=False):
         """ Run a Xija model for a given time and state profile.
 
         :param date: Date used for the dwell balance analysis
@@ -96,6 +96,8 @@ class Balance(object):
         :type offset_conditions: dict or None, optional
         :param limited_conditions: Dictionary of conditions that only occur during limiting dwells
         :type limited_conditions: dict or None, optional
+        :param maneuvers: Boolean indicating whether to consider maneuver time
+        :type maneuvers: bool, optional
 
         """
 
@@ -115,6 +117,7 @@ class Balance(object):
         self.anchor_limited_time = np.nan
         self.offset_conditions = offset_conditions
         self.limited_conditions = limited_conditions
+        self.maneuvers = maneuvers
         self.results = None
 
     def find_anchor_condition(self, p_offset, p_limited, anchor_offset_time, limit):
@@ -140,7 +143,7 @@ class Balance(object):
         # Find maximum hot time (including margin safety factor)
         dwell_results = find_second_dwell(self.date, dwell1_state, dwell2_state, anchor_offset_time, self.msid,
                                           limit, self.model_spec, self.model_init, limit_type=self.limit_type,
-                                          n_dwells=30)
+                                          n_dwells=30, maneuvers=self.maneuvers)
 
         self.anchor_offset_time = anchor_offset_time
         self.anchor_limited_time = dwell_results['dwell_2_time'] * self.margin_factor
@@ -184,7 +187,7 @@ class Balance(object):
             return None
 
         args = (self.msid, self.model_spec, self.model_init, limit, datesecs, t_1, state_pairs)
-        kwargs = {'limit_type': self.limit_type, 'print_progress': False, 'n_dwells': 30}
+        kwargs = {'limit_type': self.limit_type, 'print_progress': False, 'n_dwells': 30, 'maneuvers':self.maneuvers}
         results1 = run_state_pairs(*args, **kwargs)
 
         # This deals with a weird case where the anchor limited time@pitch does not reproduce a converged solution at
@@ -230,7 +233,7 @@ class Balance(object):
 class Balance2CEAHVPT(Balance):
 
     def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=0.95, custom_offset_conditions=None,
-                 custom_limited_conditions=None):
+                 custom_limited_conditions=None, maneuvers=False):
 
         if custom_offset_conditions is None:
             custom_offset_conditions = {}
@@ -275,42 +278,43 @@ class Balance2CEAHVPT(Balance):
         offset_conditions.update(custom_offset_conditions)
 
         super().__init__(date, model_spec, limit, constant_conditions, margin_factor,
-                         offset_conditions=offset_conditions, limited_conditions=limited_conditions)
+                         offset_conditions=offset_conditions, limited_conditions=limited_conditions,
+                         maneuvers=maneuvers)
 
 
 class Balance1DPAMZT(Balance):
 
-    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=0.95):
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=0.95, maneuvers=False):
         self.msid = '1dpamzt'
         self.model_init = {'1dpamzt': limit, 'dpa0': limit, 'eclipse': False, 'dpa_power': 0.0}
         self.limit_type = 'max'
 
-        super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
 class Balance1DEAMZT(Balance):
 
-    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=0.95):
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=0.95, maneuvers=False):
         self.msid = '1deamzt'
         self.model_init = {'1deamzt': limit, 'dea0': limit, 'eclipse': False, 'dpa_power': 0.0}
         self.limit_type = 'max'
 
-        super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
 class Balance1PDEAAT(Balance):
 
-    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0):
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0, maneuvers=False):
         self.msid = '1pdeaat'
         self.model_init = {'1pdeaat': limit, 'pin1at': limit, 'eclipse': False, 'dpa_power': 0.0}
         self.limit_type = 'max'
 
-        super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
 class BalanceFPTEMP_11(Balance):
 
-    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=0.95):
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=0.95, maneuvers=False):
         self.msid = 'fptemp'
         self.model_init = {'fptemp': limit, '1cbat': -55.0, 'sim_px': 110.0, 'eclipse': False, 'dpa_power': 0.0,
                            'orbitephem0_x': 125000e3, 'orbitephem0_y': 125000e3, 'orbitephem0_z': 125000e3,
@@ -318,77 +322,77 @@ class BalanceFPTEMP_11(Balance):
                            'aoattqt1': 0.0, 'aoattqt2': 0.0, 'aoattqt3': 0.0, 'aoattqt4': 1.0, 'dh_heater': False}
         self.limit_type = 'max'
 
-        super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
 class BalanceAACCCDPT(Balance):
 
-    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0):
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0, maneuvers=False):
         self.msid = 'aacccdpt'
         self.model_init = {'aacccdpt': limit, 'aca0': limit, 'eclipse': False}
         self.limit_type = 'max'
 
-        super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
 class Balance4RT700T(Balance):
 
-    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0):
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0, maneuvers=False):
         self.msid = '4rt700t'
         self.model_init = {'4rt700t': limit, 'oba0': limit, 'eclipse': False}
         self.limit_type = 'max'
 
-        super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
 class BalancePFTANK2T(Balance):
 
-    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0):
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0, maneuvers=False):
         self.msid = 'pftank2t'
         self.model_init = {'pftank2t': limit, 'pf0tank2t': limit, 'eclipse': False, }
         self.limit_type = 'max'
 
-        super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
 class BalancePM1THV2T(Balance):
 
-    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0):
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0, maneuvers=False):
         self.msid = 'pm1thv2t'
         self.model_init = {'pm1thv2t': limit, 'mups0': limit, 'eclipse': False, }
         self.limit_type = 'max'
 
-        super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
 class BalancePM2THV1T(Balance):
 
-    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0):
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0, maneuvers=False):
         self.msid = 'pm2thv1t'
         self.model_init = {'pm2thv1t': limit, 'mups0': limit, 'mups1': limit, 'eclipse': False, }
         self.limit_type = 'max'
 
-        super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
 class BalancePLINE04T(Balance):
 
-    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0):
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0, maneuvers=False):
         self.msid = 'pline04t'
         self.model_init = {'pline04t': limit, 'pline04t0': limit, 'eclipse': False, }
         self.limit_type = 'min'
 
-        super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
 class BalancePLINE03T(Balance):
 
-    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0):
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0, maneuvers=False):
         self.msid = 'pline03t'
         self.model_init = {'pline03t': limit, 'pline03t0': limit, 'eclipse': False, }
         self.limit_type = 'min'
 
-        super().__init__(date, model_spec, limit, constant_conditions, margin_factor)
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
 class Composite(object):
@@ -425,7 +429,8 @@ class Composite(object):
 
     """
 
-    def __init__(self, date, chips, roll, limits, max_dwell=100000, pitch_step=1, model_specs=None, anchors=None):
+    def __init__(self, date, chips, roll, limits, max_dwell=100000, pitch_step=1, model_specs=None, anchors=None,
+                 maneuvers=False):
         """ Run a Xija model for a given time and state profile.
 
         :param date: Date used for the dwell balance analysis
@@ -443,6 +448,8 @@ class Composite(object):
         :type model_specs: dict or None, optional
         :param anchors: Dictionary of limited and offset anchor pitch values for each MSID.
         :type anchors" dict or None, optional
+        :param maneuvers: Boolean indicating whether to consider maneuver time
+        :type maneuvers: bool, optional
 
         """
 
@@ -489,29 +496,39 @@ class Composite(object):
         sc_const = {'roll': roll}
 
         if self.limits['fptemp_11'] < -99.0:
-            self.dpa = Balance1DPAMZT(self.date, self.model_specs['1dpamzt'], self.limits['1dpamzt'], acis_on_const)
-            self.dea = Balance1DEAMZT(self.date, self.model_specs['1deamzt'], self.limits['1deamzt'], acis_on_const)
+            self.dpa = Balance1DPAMZT(self.date, self.model_specs['1dpamzt'], self.limits['1dpamzt'], acis_on_const,
+                                      maneuvers=maneuvers)
+            self.dea = Balance1DEAMZT(self.date, self.model_specs['1deamzt'], self.limits['1deamzt'], acis_on_const,
+                                      maneuvers=maneuvers)
             self.acisfp = BalanceFPTEMP_11(self.date, self.model_specs['fptemp_11'], self.limits['fptemp_11'],
-                                           acis_on_const)
-            self.psmc = Balance1PDEAAT(self.date, self.model_specs['1pdeaat'], self.limits['1pdeaat'], psmc_on_const)
+                                           acis_on_const, maneuvers=maneuvers)
+            self.psmc = Balance1PDEAAT(self.date, self.model_specs['1pdeaat'], self.limits['1pdeaat'], psmc_on_const,
+                                       maneuvers=maneuvers)
 
         else:
             self.dpa = Balance1DPAMZT(self.date, self.model_specs['1dpamzt'], self.limits['1dpamzt'],
-                                      acis_off_stowed_const)
+                                      acis_off_stowed_const, maneuvers=maneuvers)
             self.dea = Balance1DEAMZT(self.date, self.model_specs['1deamzt'], self.limits['1deamzt'],
-                                      acis_off_stowed_const)
+                                      acis_off_stowed_const, maneuvers=maneuvers)
             self.acisfp = BalanceFPTEMP_11(self.date, self.model_specs['fptemp_11'], self.limits['fptemp_11'],
-                                           acis_off_stowed_const)
+                                           acis_off_stowed_const, maneuvers=maneuvers)
             self.psmc = Balance1PDEAAT(self.date, self.model_specs['1pdeaat'], self.limits['1pdeaat'],
-                                       psmc_off_stowed_const)
+                                       psmc_off_stowed_const, maneuvers=maneuvers)
 
-        self.aca = BalanceAACCCDPT(self.date, self.model_specs['aacccdpt'], self.limits['aacccdpt'], {})
-        self.oba = Balance4RT700T(self.date, self.model_specs['4rt700t'], self.limits['4rt700t'], {})
-        self.mups1b = BalancePM1THV2T(self.date, self.model_specs['pm1thv2t'], self.limits['pm1thv2t'], sc_const)
-        self.mups2a = BalancePM2THV1T(self.date, self.model_specs['pm2thv1t'], self.limits['pm2thv1t'], sc_const)
-        self.tank = BalancePFTANK2T(self.date, self.model_specs['pftank2t'], self.limits['pftank2t'], sc_const)
-        self.pline03t = BalancePLINE03T(self.date, self.model_specs['pline03t'], self.limits['pline03t'], sc_const)
-        self.pline04t = BalancePLINE04T(self.date, self.model_specs['pline04t'], self.limits['pline04t'], sc_const)
+        self.aca = BalanceAACCCDPT(self.date, self.model_specs['aacccdpt'], self.limits['aacccdpt'], {},
+                                   maneuvers=maneuvers)
+        self.oba = Balance4RT700T(self.date, self.model_specs['4rt700t'], self.limits['4rt700t'], {},
+                                  maneuvers=maneuvers)
+        self.mups1b = BalancePM1THV2T(self.date, self.model_specs['pm1thv2t'], self.limits['pm1thv2t'], sc_const,
+                                      maneuvers=maneuvers)
+        self.mups2a = BalancePM2THV1T(self.date, self.model_specs['pm2thv1t'], self.limits['pm2thv1t'], sc_const,
+                                      maneuvers=maneuvers)
+        self.tank = BalancePFTANK2T(self.date, self.model_specs['pftank2t'], self.limits['pftank2t'], sc_const,
+                                    maneuvers=maneuvers)
+        self.pline03t = BalancePLINE03T(self.date, self.model_specs['pline03t'], self.limits['pline03t'], sc_const,
+                                        maneuvers=maneuvers)
+        self.pline04t = BalancePLINE04T(self.date, self.model_specs['pline04t'], self.limits['pline04t'], sc_const,
+                                        maneuvers=maneuvers)
 
         dashes = ''.join(["-", ] * 120)
         print(f'{dashes}\nMap Dwell Capability\n{dashes}')
@@ -582,7 +599,7 @@ class Composite(object):
         self.balance_model('pline03t', self.pline03t)
         self.balance_model('pline04t', self.pline04t)
 
-        s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].iteritems()])
+        s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].items()])
         print(f'Approximate dwell limits calculated by this iteration: \n  Pitch    Duration\n{s}')
 
         final_dwell_limits = copy.copy(self.dwell_limits.loc[self.pitch_range])
@@ -632,5 +649,5 @@ class Composite(object):
         self.balance_model('pline04t', self.pline04t)
 
         dashes = ''.join(["-", ] * 120)
-        s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].iteritems()])
+        s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].items()])
         print(f'{dashes}\nFinal Dwell Limits: \n  Pitch    Duration\n{s}\n')

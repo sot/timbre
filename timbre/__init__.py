@@ -9,7 +9,7 @@ from .balance import Balance4RT700T, BalancePFTANK2T, BalancePM1THV2T, BalancePM
 from .balance import BalancePLINE03T, Composite, get_limited_results, get_offset_results, DEFAULT_ANCHORS  # noqa
 from .balance import Balance2CEAHVPT  # noqa
 
-from .run_tools import add_inputs, run_instance, run_all_permutations, process_queue, generate_hrc_estimates
+from .run_tools import add_inputs, run_instance, run_all_permutations, process_queue, process_queue_hrc
 
 __version__ = ska_helpers.get_version(__package__)
 
