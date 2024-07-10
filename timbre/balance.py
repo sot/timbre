@@ -233,7 +233,9 @@ class Balance(object):
 class Balance2CEAHVPT(Balance):
 
     def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=0.95, custom_offset_conditions=None,
-                 custom_limited_conditions=None, maneuvers=False):
+                 custom_limited_conditions=None, imaging_detector=True, spectroscopy_detector=False, maneuvers=False):
+
+        assert ~(imaging_detector and spectroscopy_detector), 'Imaging and spectroscopy detectors cannot both be True'
 
         if custom_offset_conditions is None:
             custom_offset_conditions = {}
@@ -248,8 +250,8 @@ class Balance2CEAHVPT(Balance):
         limited_conditions = {
             '2ps5aon_on': True,
             '2ps5bon_on': True,
-            '2imonst_on': True,
-            '2sponst_on': True,
+            '2imonst_on': imaging_detector,
+            '2sponst_on': spectroscopy_detector,
             '2s2onst_on': True,
             '224pcast_off': False,
             '215pcast_off': True,
