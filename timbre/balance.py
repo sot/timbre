@@ -182,7 +182,11 @@ class Balance(object):
 
         if np.isnan(t_1):
             msg1 = f'{self.msid} is not limited at a pitch of {anchor_limited_pitch} degrees near ' \
-                   f'{CxoTime(datesecs).date}, with the following constant conditions:\n{self.constant_conditions}.\n'
+                   f'{CxoTime(datesecs).date}, with the following constant conditions:\n{self.constant_conditions},\n' \
+                   f'with the following limited conditions:\n{self.limited_conditions}\n' \
+                   f'with the following offset conditions:\n{self.offset_conditions}\n,' \
+                   f'a limit of {limit}, an anchor limited duration of {t_1} seconds, and an anchor offset duration' \
+                   f' of {t_2_orig} seconds.\n\n'
             print(msg1)
             return None
 
