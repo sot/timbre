@@ -358,7 +358,7 @@ def find_inputs_from_results(all_results, pitch=90):
 
 
 def process_results(model_results, case_inputs, anchor_offset_pitch, anchor_limited_pitch, pitch_range,
-                    limited_matches_offset=False):
+                    limited_matches_offset=False, imaging_detector=False, spectroscopy_detector=False):
     """ Process Timbre results to create a dataframe of inputs and outputs
 
     :param model_results: Timbre results
@@ -408,9 +408,9 @@ def process_results(model_results, case_inputs, anchor_offset_pitch, anchor_limi
 
     # Add instrument
     if limited_matches_offset is False:
-        if case_inputs['2imonst_on'] is True:
+        if imaging_detector is True:
             case_limited_results['instrument'] = 'hrci'
-        elif case_inputs['2sponst_on'] is True:
+        elif spectroscopy_detector is True:
             case_limited_results['instrument'] = 'hrcs'
     else:
         case_limited_results['instrument'] = 'acis'
@@ -514,7 +514,8 @@ def _worker_hrc(arg, q):
         header = False
 
     res = process_results(model_results, input_case, anchor_offset_pitch, anchor_limited_pitch, pitch_range,
-                          limited_matches_offset=False)
+                          limited_matches_offset=False, imaging_detector=imaging_detector,
+                          spectroscopy_detector=spectroscopy_detector)
 
     res = res.to_csv(index=False, header=header)
     q.put(res)
@@ -524,7 +525,7 @@ def _worker_hrc(arg, q):
 
 def run_hrc_estimate(date, cea_model_spec, limit, constant_conditions, custom_offset_conditions,
                      custom_limited_conditions, anchor_offset_pitch, anchor_limited_pitch, anchor_offset_time,
-                     pitch_range, imaging_detector=True, spectroscopy_detector=False, maneuvers=None):
+                     pitch_range, imaging_detector=False, spectroscopy_detector=False, maneuvers=None):
 
     model = Balance2CEAHVPT(date, cea_model_spec, limit, constant_conditions,
                             custom_offset_conditions=custom_offset_conditions,
