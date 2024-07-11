@@ -184,9 +184,9 @@ class Balance(object):
             msg1 = f'{self.msid} is not limited at a pitch of {anchor_limited_pitch} degrees near ' \
                    f'{CxoTime(datesecs).date}, with the following constant conditions:\n{self.constant_conditions},\n' \
                    f'with the following limited conditions:\n{self.limited_conditions}\n' \
-                   f'with the following offset conditions:\n{self.offset_conditions}\n,' \
+                   f'with the following offset conditions:\n{self.offset_conditions}\n' \
                    f'a limit of {limit}, an anchor limited duration of {t_1} seconds, and an anchor offset duration' \
-                   f' of {t_2_orig} seconds.\n\n'
+                   f' of {t_2_orig} seconds.\n'
             print(msg1)
             return None
 
@@ -253,7 +253,7 @@ class Balance2CEAHVPT(Balance):
 
         limited_conditions = {
             '2ps5aon_on': True,
-            '2ps5bon_on': True,
+            '2ps5bon_on': False,
             '2imonst_on': imaging_detector,
             '2sponst_on': spectroscopy_detector,
             '2s2onst_on': True,
@@ -267,8 +267,9 @@ class Balance2CEAHVPT(Balance):
         }
         limited_conditions.update(custom_limited_conditions)
 
+        # FEP and CCD counts are updated with the custom_offset_conditions dictionary.
         offset_conditions = {
-            '2ps5aon_on': False,
+            '2ps5aon_on': True,
             '2ps5bon_on': False,
             '2imonst_on': False,
             '2sponst_on': False,
