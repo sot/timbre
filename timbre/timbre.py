@@ -33,7 +33,7 @@ MODEL_LOCATIONS = {
     'aacccdpt': 'chandra_models/xija/aca/aca_spec.json',
     '1deamzt': 'chandra_models/xija/dea/dea_spec.json',
     '1dpamzt': 'chandra_models/xija/dpa/dpa_spec.json',
-    'fptemp': 'chandra_models/xija/acisfp/acisfp_spec.json',
+    'fptemp': 'chandra_models/xija/acisfp/acisfp_spec_matlab.json',
     '1pdeaat': 'chandra_models/xija/psmc/psmc_spec.json',
     'pftank2t': 'chandra_models/xija/pftank2t/pftank2t_spec.json',
     '4rt700t': 'chandra_models/xija/fwdblkhd/4rt700t_spec.json',
