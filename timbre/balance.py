@@ -22,7 +22,7 @@ DEFAULT_ANCHORS = {
     'pftank2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
     'pline03t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
     'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
-    '2ceahvpt': {'anchor_limited_pitch': 80, 'anchor_offset_pitch': 90},
+    '2ceahvpt': {'anchor_limited_pitch': 150, 'anchor_offset_pitch': 90},
 }
 
 
