@@ -22,7 +22,7 @@ DEFAULT_ANCHORS = {
     'pftank2t': {'anchor_limited_pitch': 60, 'anchor_offset_pitch': 160},
     'pline03t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
     'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
-    '2ceahvpt': {'anchor_limited_pitch': 80, 'anchor_offset_pitch': 90},
+    '2ceahvpt': {'anchor_limited_pitch': 150, 'anchor_offset_pitch': 90},
 }
 
 
@@ -182,7 +182,11 @@ class Balance(object):
 
         if np.isnan(t_1):
             msg1 = f'{self.msid} is not limited at a pitch of {anchor_limited_pitch} degrees near ' \
-                   f'{CxoTime(datesecs).date}, with the following constant conditions:\n{self.constant_conditions}.\n'
+                   f'{CxoTime(datesecs).date}, with the following constant conditions:\n{self.constant_conditions},\n' \
+                   f'with the following limited conditions:\n{self.limited_conditions}\n' \
+                   f'with the following offset conditions:\n{self.offset_conditions}\n' \
+                   f'a limit of {limit}, an anchor limited duration of {t_1} seconds, and an anchor offset duration' \
+                   f' of {t_2_orig} seconds.\n'
             print(msg1)
             return None
 
@@ -233,7 +237,9 @@ class Balance(object):
 class Balance2CEAHVPT(Balance):
 
     def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=0.95, custom_offset_conditions=None,
-                 custom_limited_conditions=None, maneuvers=False):
+                 custom_limited_conditions=None, imaging_detector=True, spectroscopy_detector=False, maneuvers=False):
+
+        assert ~(imaging_detector and spectroscopy_detector), 'Imaging and spectroscopy detectors cannot both be True'
 
         if custom_offset_conditions is None:
             custom_offset_conditions = {}
@@ -247,9 +253,9 @@ class Balance2CEAHVPT(Balance):
 
         limited_conditions = {
             '2ps5aon_on': True,
-            '2ps5bon_on': True,
-            '2imonst_on': True,
-            '2sponst_on': True,
+            '2ps5bon_on': False,
+            '2imonst_on': imaging_detector,
+            '2sponst_on': spectroscopy_detector,
             '2s2onst_on': True,
             '224pcast_off': False,
             '215pcast_off': True,
@@ -261,8 +267,9 @@ class Balance2CEAHVPT(Balance):
         }
         limited_conditions.update(custom_limited_conditions)
 
+        # FEP and CCD counts are updated with the custom_offset_conditions dictionary.
         offset_conditions = {
-            '2ps5aon_on': False,
+            '2ps5aon_on': True,
             '2ps5bon_on': False,
             '2imonst_on': False,
             '2sponst_on': False,

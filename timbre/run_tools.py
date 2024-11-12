@@ -357,64 +357,8 @@ def find_inputs_from_results(all_results, pitch=90):
     return single_pitch_limit_results[INPUT_COLUMNS].reset_index(drop=True)
 
 
-# def generate_hrc_estimates(all_results, cea_model_spec, filename, limit=10, limited_matches_offset=False,
-#                            anchor_limited_pitch=None):
-#     inputs = find_inputs_from_results(all_results, pitch=90)
-#     indexed_results = all_results.set_index(INPUT_COLUMNS)
-#
-#     # Initial parameters to create Balance2CEAHVPT object
-#     msid = '2ceahvpt'
-#     anchors = DEFAULT_ANCHORS
-#     anchor_offset_pitch = anchors[msid]['anchor_offset_pitch']
-#     if anchor_limited_pitch is None:
-#         anchor_limited_pitch = anchors[msid]['anchor_limited_pitch']
-#     constant_conditions = {'roll': 0, 'dh_heater': False}
-#     pitch_range = np.arange(45, 181, 1)
-#     placeholder_date = '2023:001'
-#
-#     # Create Balance object
-#     model = Balance2CEAHVPT(placeholder_date, cea_model_spec, limit, constant_conditions, custom_offset_conditions=None,
-#                             custom_limited_conditions=None)
-#
-#     # Initialize case_results dataframe
-#     case_results = pd.DataFrame(columns=['2ceahvpt', 'instrument'] + INPUT_COLUMNS)
-#
-#     num_cases = len(inputs)
-#     for case_num in range(num_cases):
-#
-#         print(f'{CxoTime().date}: Running case number {case_num} out of {num_cases}')
-#
-#         # Update case parameters
-#         chips = inputs.iloc[case_num]['chips']
-#         model.offset_conditions.update({'ccd_count': chips, 'fep_count': chips})
-#         composite_case = indexed_results.loc[tuple(inputs.iloc[case_num].values[:-1])].min(axis=1)
-#         anchor_offset_time = composite_case.loc[anchor_offset_pitch]
-#
-#         if limited_matches_offset is True:
-#             model.limited_conditions = copy(model.offset_conditions)
-#
-#         # Run case
-#         model.find_anchor_condition(anchor_offset_pitch, anchor_limited_pitch, anchor_offset_time, limit)
-#         model.results = model.generate_balanced_pitch_dwells(model.datesecs,
-#                                                              anchor_limited_pitch,
-#                                                              model.anchor_limited_time,
-#                                                              anchor_offset_pitch,
-#                                                              anchor_offset_time,
-#                                                              limit,
-#                                                              pitch_range)
-#
-#         new_case_results = process_results(model.results, inputs.iloc[case_num], anchor_offset_pitch,
-#                                            anchor_limited_pitch, pitch_range,
-#                                            limited_matches_offset=limited_matches_offset)
-#
-#         # Add case results to full results dataframe
-#         case_results = pd.concat([case_results, new_case_results], ignore_index=True)
-#
-#     case_results.to_csv(filename)
-
-
 def process_results(model_results, case_inputs, anchor_offset_pitch, anchor_limited_pitch, pitch_range,
-                    limited_matches_offset=False):
+                    limited_matches_offset=False, imaging_detector=False, spectroscopy_detector=False):
     """ Process Timbre results to create a dataframe of inputs and outputs
 
     :param model_results: Timbre results
@@ -464,7 +408,10 @@ def process_results(model_results, case_inputs, anchor_offset_pitch, anchor_limi
 
     # Add instrument
     if limited_matches_offset is False:
-        case_limited_results['instrument'] = 'hrc'
+        if imaging_detector is True:
+            case_limited_results['instrument'] = 'hrci'
+        elif spectroscopy_detector is True:
+            case_limited_results['instrument'] = 'hrcs'
     else:
         case_limited_results['instrument'] = 'acis'
     case_offset_results['instrument'] = 'acis'
@@ -480,10 +427,12 @@ def process_results(model_results, case_inputs, anchor_offset_pitch, anchor_limi
 
 
 def process_queue_hrc(all_results, cea_model_spec, filename, limit=10, limited_matches_offset=False,
-                      anchor_limited_pitch=None, anchor_offset_pitch=None, cpu_count=2, maneuvers=False):
+                      anchor_limited_pitch=None, anchor_offset_pitch=None, cpu_count=2, imaging_detector=True,
+                      spectroscopy_detector=False, maneuvers=False):
 
     inputs = find_inputs_from_results(all_results, pitch=90)
     indexed_results = all_results.set_index(INPUT_COLUMNS)
+    indexed_results = indexed_results.sort_index()
 
     msid = '2ceahvpt'
 
@@ -522,7 +471,7 @@ def process_queue_hrc(all_results, cea_model_spec, filename, limit=10, limited_m
 
         arg = (input_case, cea_model_spec, limit, constant_conditions, custom_offset_conditions,
                custom_limited_conditions, anchor_offset_pitch, anchor_limited_pitch, anchor_offset_time, pitch_range,
-               case_num, num_cases, maneuvers)
+               case_num, num_cases, imaging_detector, spectroscopy_detector, maneuvers)
         job = pool.apply_async(_worker_hrc, (arg, q))
         jobs.append(job)
 
@@ -546,14 +495,15 @@ def _worker_hrc(arg, q):
     """
 
     (input_case, cea_model_spec, limit, constant_conditions, custom_offset_conditions, custom_limited_conditions,
-     anchor_offset_pitch, anchor_limited_pitch, anchor_offset_time, pitch_range, n, num_sets, maneuvers) \
-        = arg
+     anchor_offset_pitch, anchor_limited_pitch, anchor_offset_time, pitch_range, n, num_sets, imaging_detector,
+     spectroscopy_detector, maneuvers) = arg
 
     date = input_case['date']
 
     model_results = run_hrc_estimate(date, cea_model_spec, limit, constant_conditions, custom_offset_conditions,
-                           custom_limited_conditions, anchor_offset_pitch, anchor_limited_pitch, anchor_offset_time,
-                           pitch_range, maneuvers=maneuvers)
+                                     custom_limited_conditions, anchor_offset_pitch, anchor_limited_pitch,
+                                     anchor_offset_time, pitch_range, imaging_detector=imaging_detector,
+                                     spectroscopy_detector=spectroscopy_detector, maneuvers=maneuvers)
 
     text1 = f'{CxoTime().date}: Finished Limit Set {n + 1} out of {num_sets}:\n{input_case}\n\n'
     print(text1)
@@ -564,7 +514,8 @@ def _worker_hrc(arg, q):
         header = False
 
     res = process_results(model_results, input_case, anchor_offset_pitch, anchor_limited_pitch, pitch_range,
-                          limited_matches_offset=False)
+                          limited_matches_offset=False, imaging_detector=imaging_detector,
+                          spectroscopy_detector=spectroscopy_detector)
 
     res = res.to_csv(index=False, header=header)
     q.put(res)
@@ -574,11 +525,13 @@ def _worker_hrc(arg, q):
 
 def run_hrc_estimate(date, cea_model_spec, limit, constant_conditions, custom_offset_conditions,
                      custom_limited_conditions, anchor_offset_pitch, anchor_limited_pitch, anchor_offset_time,
-                     pitch_range, maneuvers=None):
+                     pitch_range, imaging_detector=False, spectroscopy_detector=False, maneuvers=None):
 
     model = Balance2CEAHVPT(date, cea_model_spec, limit, constant_conditions,
                             custom_offset_conditions=custom_offset_conditions,
                             custom_limited_conditions=custom_limited_conditions,
+                            imaging_detector=imaging_detector,
+                            spectroscopy_detector=spectroscopy_detector,
                             maneuvers=maneuvers)
 
     model.find_anchor_condition(anchor_offset_pitch, anchor_limited_pitch, anchor_offset_time, limit)
