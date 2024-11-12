@@ -326,7 +326,8 @@ class BalanceFPTEMP_11(Balance):
         self.model_init = {'fptemp': limit, '1cbat': -55.0, 'sim_px': 110.0, 'eclipse': False, 'dpa_power': 0.0,
                            'orbitephem0_x': 125000e3, 'orbitephem0_y': 125000e3, 'orbitephem0_z': 125000e3,
                            'solarephem0_x': 2.6e10, 'solarephem0_y': -1.3e11, 'solarephem0_z': -5.7e10,
-                           'aoattqt1': 0.0, 'aoattqt2': 0.0, 'aoattqt3': 0.0, 'aoattqt4': 1.0, 'dh_heater': False}
+                           'aoattqt1': 0.0, 'aoattqt2': 0.0, 'aoattqt3': 0.0, 'aoattqt4': 1.0, 'dh_heater': False,
+                           '215pcast_off': False}
         self.limit_type = 'max'
 
         super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
