@@ -294,17 +294,19 @@ def _scale_dwells_mp_worker(arg, q):
     res = scale_dwells_mp(arg)
 
     case_dict = arg['case_dict']
+    id_number = arg['id']
     case_key_values = case_dict.values()
     index_tuples = [tuple(case_key_values) + ind for ind in res.index]
     index_names = list(case_dict.keys()) + list(res.index.names)
     res.index = pd.MultiIndex.from_tuples(index_tuples, names=index_names)
 
     header = ', '.join(index_names + list(res.columns)) + '\n'
-    print(header)
 
     res = res.to_csv(index=True, header=False)
 
     q.put((res, header))
+
+    print(f"Processed case id {id_number}")
 
     return res
 
@@ -312,8 +314,8 @@ def _scale_dwells_mp_worker(arg, q):
 def stack_inputs_for_base_timbre_queue(input_sets, max_dwell, pitch_step=1, model_specs=None, anchors=DEFAULT_ANCHORS, maneuvers=False, num_cases=None):
     """ Stack the inputs for the base Timbre queue
 
-    :param input_sets: Dates to be simulated
-    :type input_sets: pd.DataFrame
+    :param input_sets: List of inputs for each case
+    :type input_sets: list
     :param max_dwell: Maximum dwell time for initial offset cooling
     :type max_dwell: int, float
     :param pitch_step: Pitch resolution of output results, see Composite API for limitations

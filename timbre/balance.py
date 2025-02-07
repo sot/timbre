@@ -986,7 +986,15 @@ def fill_pitch_range_dwells(balance_obj, pitch_range, anchor_pitch, anchor_time,
     return fill_results, p
 
 
-def stack_inputs_for_scale_dwells_mp(results_file, anchors=DEFAULT_ANCHORS, pitch_range=None, model_specs=None, scale_factors=None):
+def stack_inputs_for_scale_dwells_mp(
+    results_file,
+    anchors=DEFAULT_ANCHORS,
+    pitch_range=None,
+    model_specs=None,
+    scale_factors=None,
+    overrides=None,
+    msids=None,
+):
     """
     Load the data for scale_dwells from the results file.
 
@@ -1000,8 +1008,10 @@ def stack_inputs_for_scale_dwells_mp(results_file, anchors=DEFAULT_ANCHORS, pitc
     :type model_specs: dict
     :param scale_factors: List of scale factors to test
     :type scale_factors: list
-    :returns: Tuple containing the indexed DataFrame and the balance classes
-    :rtype: tuple
+    :param overrides: Dictionary of dwell time overrides for the default anchors
+    :type overrides: dict
+    :returns: List of dictionaries containing the inputs for each case
+    :rtype: list
 
     """
 
@@ -1009,82 +1019,123 @@ def stack_inputs_for_scale_dwells_mp(results_file, anchors=DEFAULT_ANCHORS, pitc
         pitch_range = np.arange(45, 181, 1)
 
     if model_specs is None:
-        home = path.expanduser('~')
-        model_specs = load_model_specs(local_repository_location=home + '/chandra_models/xija/')
+        home = path.expanduser("~")
+        model_specs = load_model_specs(
+            local_repository_location=home
+            + "/AXAFLIB/chandra_models/"
+        )
 
     if scale_factors is None:
         scale_factors = [0.25, 0.5, 0.75, 1.0]
 
-    # Read the results file 
+    if overrides is None:
+        overrides = {}
+
+    # Read the results file
     df = pd.read_csv(results_file)
 
-    # Columns that define unique cases
-    case_cols = ['fptemp_11_limit', '1dpamzt_limit', '1deamzt_limit', '1pdeaat_limit',
-                'aacccdpt_limit', '4rt700t_limit', 'pftank2t_limit', 'pm1thv2t_limit',
-                'pm2thv1t_limit', 'pline03t_limit', 'pline04t_limit', 'date', 'datesecs',
-                'roll', 'chips']
-    
-    index_cols = case_cols + ['pitch', 'dwell_type']
+    df.columns = df.columns.str.strip().str.lower()
 
-    msids = ['1dpamzt', '1deamzt', 'fptemp_11', '1pdeaat', 'aacccdpt', 'pm1thv2t', 'pm2thv1t', '4rt700t', 'pftank2t', 
-             'pline03t', 'pline04t']
+    # Columns that define unique cases
+    case_cols = [
+        "fptemp_11_limit",
+        "1dpamzt_limit",
+        "1deamzt_limit",
+        "1pdeaat_limit",
+        "aacccdpt_limit",
+        "4rt700t_limit",
+        "pftank2t_limit",
+        "pm1thv2t_limit",
+        "pm2thv1t_limit",
+        "pline03t_limit",
+        "pline04t_limit",
+        "date",
+        "datesecs",
+        "roll",
+        "chips",
+    ]
+
+    index_cols = case_cols + ["pitch", "dwell_type"]
+
+    if msids is None:   
+        msids = [
+            "1dpamzt",
+            "1deamzt",
+            "fptemp_11",
+            "1pdeaat",
+            "aacccdpt",
+            "pm1thv2t",
+            "pm2thv1t",
+            "4rt700t",
+            "pftank2t",
+            "pline03t",
+            "pline04t",
+            ]
 
     # Set index for input results DataFrame
     indexed_df = df.set_index(index_cols)
     indexed_df.sort_index(inplace=True)
 
-    
     # Map of MSID to Balance class
     balance_classes = {
-        '1dpamzt': Balance1DPAMZT,
-        '1deamzt': Balance1DEAMZT,
-        'fptemp_11': BalanceFPTEMP_11,
-        '1pdeaat': Balance1PDEAAT,
-        'aacccdpt': BalanceAACCCDPT,
-        'pm1thv2t': BalancePM1THV2T,
-        'pm2thv1t': BalancePM2THV1T,
-        '4rt700t': Balance4RT700T,
-        'pftank2t': BalancePFTANK2T,
-        'pline03t': BalancePLINE03T,
-        'pline04t': BalancePLINE04T
+        "1dpamzt": Balance1DPAMZT,
+        "1deamzt": Balance1DEAMZT,
+        "fptemp_11": BalanceFPTEMP_11,
+        "1pdeaat": Balance1PDEAAT,
+        "aacccdpt": BalanceAACCCDPT,
+        "pm1thv2t": BalancePM1THV2T,
+        "pm2thv1t": BalancePM2THV1T,
+        "4rt700t": Balance4RT700T,
+        "pftank2t": BalancePFTANK2T,
+        "pline03t": BalancePLINE03T,
+        "pline04t": BalancePLINE04T,
     }
 
     # Columns for results
-    results_cols = [f'scale_factor_results_{sf}' for sf in scale_factors]
+    results_cols = [f"scale_factor_results_{sf}" for sf in scale_factors]
 
     # Create a new index that adds the msid to the index, and shifts the index so the last two columns are dwell_type and pitch
     old_index = pd.MultiIndex.from_arrays([df[col] for col in index_cols])
     new_tuples = [(*idx_tuple, m) for idx_tuple in old_index for m in msids]
-    new_index = pd.MultiIndex.from_tuples(new_tuples, names=index_cols + ['msid', ])
+    new_index = pd.MultiIndex.from_tuples(
+        new_tuples,
+        names=index_cols
+        + [
+            "msid",
+        ],
+    )
 
     # Create a DataFrame with case columns as index and values columns for pitch, composite limit, and scale factors
     #
-    # For the multiprocessing version, this is only needed to provide the index for the results Dataframe, it should 
+    # For the multiprocessing version, this is only needed to provide the index for the results Dataframe, it should
     # probably be replaced with a more direct approach to creating the index for the results Dataframe.
     results_df = pd.DataFrame(index=new_index, columns=results_cols)
     results_df.sort_index(inplace=True)
 
-    truncated_index = results_df.index.droplevel(["pitch", "dwell_type", "msid"]).unique()
+    truncated_index = results_df.index.droplevel(
+        ["pitch", "dwell_type", "msid"]
+    ).unique()
     case_results_index = results_df.index.droplevel(truncated_index.names).unique()
 
     multiprocessing_inputs = []
 
     for n, truncated_case_index in enumerate(truncated_index):
-
         case_dict = dict(zip(case_cols, truncated_case_index))
 
         dwell_balance_inputs = {
-            'case_dict': case_dict,
-            'input_case_results': indexed_df.loc[truncated_case_index],
-            'anchors': anchors,
-            'pitch_range': pitch_range,
-            'model_specs': model_specs,
-            'scale_factors': scale_factors,
-            'balance_classes': balance_classes,
-            'msids': msids,
-            'case_results_index': case_results_index,
-            'case_results_cols': results_cols
-            }
+            "case_dict": case_dict,
+            "input_case_results": indexed_df.loc[truncated_case_index],
+            "anchors": anchors,
+            "pitch_range": pitch_range,
+            "model_specs": model_specs,
+            "scale_factors": scale_factors,
+            "balance_classes": balance_classes,
+            "msids": msids,
+            "case_results_index": case_results_index,
+            "case_results_cols": results_cols,
+            "overrides": overrides,
+            "id": n,
+        }
 
         multiprocessing_inputs.append(dwell_balance_inputs)
 
@@ -1093,44 +1144,52 @@ def stack_inputs_for_scale_dwells_mp(results_file, anchors=DEFAULT_ANCHORS, pitc
 
 # create a separate version of scale_dwells that can be used in a multiprocessing pool
 def scale_dwells_mp(inputs):
-
-    case_dict = inputs['case_dict']
-    input_case_results = inputs['input_case_results']
-    anchors = inputs['anchors']
-    pitch_range = inputs['pitch_range']
-    model_specs = inputs['model_specs']
-    scale_factors = inputs['scale_factors']
-    balance_classes = inputs['balance_classes']
-    msids = inputs['msids']
-    case_results_index = inputs['case_results_index']
-    case_results_cols = inputs['case_results_cols']
+    case_dict = inputs["case_dict"]
+    input_case_results = inputs["input_case_results"]
+    anchors = inputs["anchors"]
+    pitch_range = inputs["pitch_range"]
+    model_specs = inputs["model_specs"]
+    scale_factors = inputs["scale_factors"]
+    balance_classes = inputs["balance_classes"]
+    msids = inputs["msids"]
+    case_results_index = inputs["case_results_index"]
+    case_results_cols = inputs["case_results_cols"]
+    overrides = inputs["overrides"]
     case_results = pd.DataFrame(index=case_results_index, columns=case_results_cols)
 
-    roll = case_dict['roll']
-    chips = case_dict['chips']
-    date = case_dict['date']
-    fptemp_11_limit = case_dict['fptemp_11_limit']
+    roll = case_dict["roll"]
+    chips = case_dict["chips"]
+    date = case_dict["date"]
+    fptemp_11_limit = case_dict["fptemp_11_limit"]
     baseline_constant_conditions = get_constant_condition_dictionaries(roll, chips)
-    all_msid_constant_conditions = get_msid_constant_conditions(baseline_constant_conditions, fptemp_11_limit)
+    all_msid_constant_conditions = get_msid_constant_conditions(
+        baseline_constant_conditions, fptemp_11_limit
+    )
 
     for msid in msids:
         constant_conditions = all_msid_constant_conditions[msid]
-        limit = case_dict[f'{msid}_limit']
+        limit = case_dict[f"{msid}_limit"]
         balance_class = balance_classes[msid]
         balance_obj = balance_class(
             date=date,
             model_spec=model_specs[msid],
             limit=limit,
             constant_conditions=constant_conditions,
-            margin_factor=1.0
+            margin_factor=1.0,
         )
 
-        anchor_limited_pitch = anchors[msid]['anchor_limited_pitch']
-        anchor_offset_pitch = anchors[msid]['anchor_offset_pitch']
+        anchor_limited_pitch = anchors[msid]["anchor_limited_pitch"]
+        anchor_offset_pitch = anchors[msid]["anchor_offset_pitch"]
 
-        # These are the composite dwell limits at the anchor pitches
-        offset_time = input_case_results.loc[(anchor_offset_pitch, 'offset')].min()
-        limited_time = input_case_results.loc[(anchor_limited_pitch, 'limit')].min()
+        # These are the composite dwell limits at the anchor pitches, unless overridden
+        offset_time = input_case_results.loc[(anchor_offset_pitch, "offset")].min()
+        limited_time = input_case_results.loc[(anchor_limited_pitch, "limit")].min()
+        if msid in overrides:
+            if overrides[msid]["offset_time"] is not None:
+                offset_time = overrides[msid]["offset_time"]
+
+            if overrides[msid]["limited_time"] is not None:
+                limited_time = overrides[msid]["limited_time"]
 
         if pd.isna(offset_time) or pd.isna(limited_time):
             continue
@@ -1139,29 +1198,45 @@ def scale_dwells_mp(inputs):
             scaled_offset_anchor_time = offset_time * scale
             scaled_limited_anchor_time = limited_time * scale
 
-            scale_factor_name = f'scale_factor_results_{scale}'
+            scale_factor_name = f"scale_factor_results_{scale}"
 
-            case_results.loc[(anchor_offset_pitch, 'offset', msid), scale_factor_name] = scaled_offset_anchor_time
+            case_results.loc[
+                (anchor_offset_pitch, "offset", msid), scale_factor_name
+            ] = scaled_offset_anchor_time
 
-            if scale == 1.0:
-                msid_limited_times = input_case_results.loc[(slice(None), 'limit'), msid]
-                case_results.loc[(slice(None), 'limit', msid), scale_factor_name] = msid_limited_times
+            if scale == 1.0 and msid not in overrides:
+                msid_limited_times = input_case_results.loc[
+                    (slice(None), "limit"), msid
+                ]
+                case_results.loc[
+                    (slice(None), "limit", msid), scale_factor_name
+                ] = msid_limited_times
 
-                msid_offset_times = input_case_results.loc[(slice(None), 'offset'), msid]
-                case_results.loc[(slice(None), 'offset', msid), scale_factor_name] = msid_offset_times
+                msid_offset_times = input_case_results.loc[
+                    (slice(None), "offset"), msid
+                ]
+                case_results.loc[
+                    (slice(None), "offset", msid), scale_factor_name
+                ] = msid_offset_times
 
                 continue
 
             # Recalculate limited dwell time using scaled offset time
-            dwell1_state = {**{'pitch': anchor_offset_pitch}, **constant_conditions, 
-                            **balance_obj.offset_conditions}
-            dwell2_state = {**{'pitch': anchor_limited_pitch}, **constant_conditions, 
-                            **balance_obj.limited_conditions}
-            
+            dwell1_state = {
+                **{"pitch": anchor_offset_pitch},
+                **constant_conditions,
+                **balance_obj.offset_conditions,
+            }
+            dwell2_state = {
+                **{"pitch": anchor_limited_pitch},
+                **constant_conditions,
+                **balance_obj.limited_conditions,
+            }
+
             dwell_results = find_second_dwell(
-                balance_obj.date, 
-                dwell1_state, 
-                dwell2_state, 
+                balance_obj.date,
+                dwell1_state,
+                dwell2_state,
                 scaled_offset_anchor_time,
                 balance_obj.msid,
                 balance_obj.limit,
@@ -1169,13 +1244,15 @@ def scale_dwells_mp(inputs):
                 balance_obj.model_init,
                 limit_type=balance_obj.limit_type,
                 n_dwells=30,
-                maneuvers=balance_obj.maneuvers
+                maneuvers=balance_obj.maneuvers,
             )
 
             if dwell_results is not None:
                 # Fill in the dwell times for the rest of the pitch range
 
-                case_results.loc[(anchor_limited_pitch, 'limit', msid), scale_factor_name] = dwell_results['dwell_2_time']
+                case_results.loc[
+                    (anchor_limited_pitch, "limit", msid), scale_factor_name
+                ] = dwell_results["dwell_2_time"]
 
                 # Fill in the rest of the pitch range for limited dwells
                 limited_fill_results, p = fill_pitch_range_dwells(
@@ -1183,9 +1260,11 @@ def scale_dwells_mp(inputs):
                     pitch_range,
                     anchor_offset_pitch,
                     scaled_offset_anchor_time,
-                    fill_dwell_type='limit'
+                    fill_dwell_type="limit",
                 )
-                case_results.loc[(p, 'limit', msid), scale_factor_name] = limited_fill_results['t_dwell2']
+                case_results.loc[
+                    (p, "limit", msid), scale_factor_name
+                ] = limited_fill_results["t_dwell2"]
 
                 # Fill in the rest of the pitch range for offset dwells
                 offset_fill_results, p = fill_pitch_range_dwells(
@@ -1193,10 +1272,10 @@ def scale_dwells_mp(inputs):
                     pitch_range,
                     anchor_limited_pitch,
                     scaled_limited_anchor_time,
-                    fill_dwell_type='offset'
+                    fill_dwell_type="offset",
                 )
-                case_results.loc[(p, 'offset', msid), scale_factor_name] = offset_fill_results['t_dwell2']   
-
+                case_results.loc[
+                    (p, "offset", msid), scale_factor_name
+                ] = offset_fill_results["t_dwell2"]
 
     return case_results
-
