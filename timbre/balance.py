@@ -948,7 +948,7 @@ def fill_pitch_range_dwells(balance_obj, pitch_range, anchor_pitch, anchor_time,
     :rtype: numpy.ndarray
     """
     # Remove anchor pitch from range to fill
-    p = pitch_range[pitch_range != anchor_pitch]
+    p = pitch_range # [pitch_range != anchor_pitch]
     
     # Set up state pairs based on whether we're filling limited or offset dwells
     # The only reason these are separate is because the offset conditions could be different from the limited conditions,
@@ -1185,10 +1185,14 @@ def scale_dwells_mp(inputs):
         offset_time = input_case_results.loc[(anchor_offset_pitch, "offset")].min()
         limited_time = input_case_results.loc[(anchor_limited_pitch, "limit")].min()
         if msid in overrides:
+            if overrides[msid]["offset_time"] is not None and overrides[msid]["limited_time"] is not None:
+                raise ValueError(f"Both offset and limited time cannot be overridden for {msid}")
+                continue
+
             if overrides[msid]["offset_time"] is not None:
                 offset_time = overrides[msid]["offset_time"]
 
-            if overrides[msid]["limited_time"] is not None:
+            elif overrides[msid]["limited_time"] is not None:
                 limited_time = overrides[msid]["limited_time"]
 
         if pd.isna(offset_time) or pd.isna(limited_time):
@@ -1200,10 +1204,21 @@ def scale_dwells_mp(inputs):
 
             scale_factor_name = f"scale_factor_results_{scale}"
 
-            case_results.loc[
-                (anchor_offset_pitch, "offset", msid), scale_factor_name
-            ] = scaled_offset_anchor_time
+            start_condition = "offset"
+            if msid in overrides and overrides[msid]["limited_time"] is not None:
+                start_condition = "limit"
 
+            if start_condition == "offset":
+                case_results.loc[
+                    (anchor_offset_pitch, "offset", msid), scale_factor_name
+                ] = scaled_offset_anchor_time
+
+            if start_condition == "limit":
+                case_results.loc[
+                    (anchor_limited_pitch, "limit", msid), scale_factor_name
+                ] = scaled_limited_anchor_time
+
+            # If the scale factor is 1.0 and there are no overrides, then we can just use the input case results
             if scale == 1.0 and msid not in overrides:
                 msid_limited_times = input_case_results.loc[
                     (slice(None), "limit"), msid
@@ -1232,6 +1247,9 @@ def scale_dwells_mp(inputs):
                 **constant_conditions,
                 **balance_obj.limited_conditions,
             }
+            if start_condition == "limited":
+                dwell1_state, dwell2_state = dwell2_state, dwell1_state
+
 
             dwell_results = find_second_dwell(
                 balance_obj.date,
@@ -1250,32 +1268,67 @@ def scale_dwells_mp(inputs):
             if dwell_results is not None:
                 # Fill in the dwell times for the rest of the pitch range
 
-                case_results.loc[
-                    (anchor_limited_pitch, "limit", msid), scale_factor_name
-                ] = dwell_results["dwell_2_time"]
+                # If the start condition is offset, then the dwell2 time is the limited dwell time
+                if start_condition == "offset":
+                    case_results.loc[
+                        (anchor_limited_pitch, "limit", msid), scale_factor_name
+                    ] = dwell_results["dwell_2_time"]
 
-                # Fill in the rest of the pitch range for limited dwells
-                limited_fill_results, p = fill_pitch_range_dwells(
-                    balance_obj,
-                    pitch_range,
-                    anchor_offset_pitch,
-                    scaled_offset_anchor_time,
-                    fill_dwell_type="limit",
-                )
-                case_results.loc[
-                    (p, "limit", msid), scale_factor_name
-                ] = limited_fill_results["t_dwell2"]
+                    # Fill in the rest of the pitch range for limited dwells
+                    limited_fill_results, p = fill_pitch_range_dwells(
+                        balance_obj,
+                        pitch_range,
+                        anchor_offset_pitch,
+                        scaled_offset_anchor_time,
+                        fill_dwell_type="limit",
+                    )
+                    case_results.loc[
+                        (p, "limit", msid), scale_factor_name
+                    ] = limited_fill_results["t_dwell2"]
 
-                # Fill in the rest of the pitch range for offset dwells
-                offset_fill_results, p = fill_pitch_range_dwells(
-                    balance_obj,
-                    pitch_range,
-                    anchor_limited_pitch,
-                    scaled_limited_anchor_time,
-                    fill_dwell_type="offset",
-                )
-                case_results.loc[
-                    (p, "offset", msid), scale_factor_name
-                ] = offset_fill_results["t_dwell2"]
+                    # Fill in the rest of the pitch range for offset dwells
+                    offset_fill_results, p = fill_pitch_range_dwells(
+                        balance_obj,
+                        pitch_range,
+                        anchor_limited_pitch,
+                        scaled_limited_anchor_time,
+                        fill_dwell_type="offset",
+                    )
+                    case_results.loc[
+                        (p, "offset", msid), scale_factor_name
+                    ] = offset_fill_results["t_dwell2"]
+
+                # If the start condition is limit, then the dwell2 time is the offset dwell time
+                else:
+                    case_results.loc[
+                        (anchor_offset_pitch, "offset", msid), scale_factor_name
+                    ] = dwell_results["dwell_2_time"]
+
+                    # Because the scaled_xxxxxx_anchor_time is defined above within the start_condition conditional check, 
+                    # we need to perform the next two fill operations in the same order as the scaled times were defined.
+
+                    # Fill in the rest of the pitch range for offset dwells
+                    offset_fill_results, p = fill_pitch_range_dwells(
+                        balance_obj,
+                        pitch_range,
+                        anchor_limited_pitch,
+                        scaled_limited_anchor_time,
+                        fill_dwell_type="offset",
+                    )
+                    case_results.loc[
+                        (p, "offset", msid), scale_factor_name
+                    ] = offset_fill_results["t_dwell2"]
+
+                    # Fill in the rest of the pitch range for limited dwells
+                    limited_fill_results, p = fill_pitch_range_dwells(
+                        balance_obj,
+                        pitch_range,
+                        anchor_offset_pitch,
+                        scaled_offset_anchor_time,
+                        fill_dwell_type="limit",
+                    )
+                    case_results.loc[
+                        (p, "limit", msid), scale_factor_name
+                    ] = limited_fill_results["t_dwell2"]
 
     return case_results
