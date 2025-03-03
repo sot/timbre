@@ -1287,6 +1287,7 @@ def scale_dwells_mp(inputs):
                     ] = limited_fill_results["t_dwell2"]
 
                     # The scaled_limited_anchor_time is recalculated in the fill_pitch_range_dwells function using the scaled_offset_anchor_time.
+                    # This is particularly important if overrides are used.
                     scaled_limited_anchor_time = case_results.loc[
                         (anchor_limited_pitch, "limit", msid), scale_factor_name
                     ]       
