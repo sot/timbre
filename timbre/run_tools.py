@@ -248,7 +248,7 @@ def _base_timbre_worker(arg, q):
     text2 = f'{num_sets}:\n{input_set}\nFor {date} and Chip Numbers {chips}\n\n'
     print(text1 + text2)
 
-    header = ', '.join(list(res.columns)) + '\n'
+    header = ','.join(list(res.columns)) + '\n'
 
     res = res.to_csv(index=False, header=False)
     q.put((res, header))
@@ -291,7 +291,13 @@ def _scale_dwells_mp_worker(arg, q):
     :rtype: str
     """
 
-    res = scale_dwells_mp(arg)
+    try:
+        res = scale_dwells_mp(arg)
+    except ValueError as e:
+        print(f"Error processing case id {arg['id']}: {e}")
+        case_results_index = arg["case_results_index"]
+        case_results_cols = arg["case_results_cols"]
+        res = pd.DataFrame(index=case_results_index, columns=case_results_cols)
 
     case_dict = arg['case_dict']
     id_number = arg['id']
@@ -300,7 +306,7 @@ def _scale_dwells_mp_worker(arg, q):
     index_names = list(case_dict.keys()) + list(res.index.names)
     res.index = pd.MultiIndex.from_tuples(index_tuples, names=index_names)
 
-    header = ', '.join(index_names + list(res.columns)) + '\n'
+    header = ','.join(index_names + list(res.columns)) + '\n'
 
     res = res.to_csv(index=True, header=False)
 
@@ -631,18 +637,13 @@ def _worker_hrc(arg, q):
     text1 = f'{CxoTime().date}: Finished Limit Set {n + 1} out of {num_sets}:\n{input_case}\n\n'
     print(text1)
 
-    if n == 0:
-        header = True
-    else:
-        header = False
 
     res = process_results(model_results, input_case, anchor_offset_pitch, anchor_limited_pitch, pitch_range,
                           limited_matches_offset=False, imaging_detector=imaging_detector,
                           spectroscopy_detector=spectroscopy_detector)
 
-    header = res.columns
-
-    res = res.to_csv(index=False, header=header)
+    header = ','.join(res.columns)
+    res = res.to_csv(index=False, header=False)
     q.put((res, header))
 
     return res
