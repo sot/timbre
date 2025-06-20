@@ -1,9 +1,9 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 import copy
-
 import numpy as np
 import pandas as pd
+from os import path
 
 from cxotime import CxoTime
 
@@ -438,7 +438,7 @@ class Composite(object):
     """
 
     def __init__(self, date, chips, roll, limits, max_dwell=100000, pitch_step=1, model_specs=None, anchors=None,
-                 maneuvers=False):
+                 maneuvers=False, execute=True):
         """ Run a Xija model for a given time and state profile.
 
         :param date: Date used for the dwell balance analysis
@@ -458,6 +458,8 @@ class Composite(object):
         :type anchors" dict or None, optional
         :param maneuvers: Boolean indicating whether to consider maneuver time
         :type maneuvers: bool, optional
+        :param execute: Boolean indicating whether to run the composite balance calculations upon object instantiation
+        :type execute: bool, optional
 
         """
 
@@ -538,12 +540,13 @@ class Composite(object):
         self.pline04t = BalancePLINE04T(self.date, self.model_specs['pline04t'], self.limits['pline04t'], sc_const,
                                         maneuvers=maneuvers)
 
-        dashes = ''.join(["-", ] * 120)
-        print(f'{dashes}\nMap Dwell Capability\n{dashes}')
-        self.map_composite()
+        if execute is True:
+            dashes = ''.join(["-", ] * 120)
+            print(f'{dashes}\nMap Dwell Capability\n{dashes}')
+            self.map_composite()
 
-        print(f'{dashes}\nFill In Dwell Capability\n{dashes}\n')
-        self.fill_composite()
+            print(f'{dashes}\nFill In Dwell Capability\n{dashes}\n')
+            self.fill_composite()
 
     def _get_required_pitch_values(self):
         """ Get the set of all anchor limited and offset pitch values.
@@ -659,3 +662,511 @@ class Composite(object):
         dashes = ''.join(["-", ] * 120)
         s = ''.join([f'    {p:>3}    {d:6.2f}\n' for p, d in self.dwell_limits.loc[self.pitch_range].items()])
         print(f'{dashes}\nFinal Dwell Limits: \n  Pitch    Duration\n{s}\n')
+
+
+
+def get_constant_condition_dictionaries(roll, chips):
+    """Generate condition dictionaries for different ACIS and spacecraft states.
+    
+    :param roll: spacecraft roll angle
+    :type roll: float
+    :param chips: number of ACIS chips
+    :type chips: int
+    :returns: Dictionary containing all condition dictionaries
+    :rtype: dict
+    """
+    conditions = {
+        'acis_on': {
+            'roll': roll,
+            'fep_count': chips,
+            'ccd_count': chips,
+            'clocking': True,
+            'vid_board': True,
+            'sim_z': 100000
+        },
+        'acis_off_stowed': {
+            'roll': roll,
+            'fep_count': 3,
+            'ccd_count': 0,
+            'clocking': False,
+            'vid_board': False,
+            'sim_z': -99616
+        },
+        'psmc_on': {
+            'roll': roll,
+            'fep_count': chips,
+            'ccd_count': chips,
+            'clocking': True,
+            'vid_board': True,
+            'sim_z': 100000,
+            'dh_heater': False
+        },
+        'psmc_off_stowed': {
+            'roll': roll,
+            'fep_count': 3,
+            'ccd_count': 0,
+            'clocking': False,
+            'vid_board': False,
+            'sim_z': -99616,
+            'dh_heater': False
+        },
+        'sc': {
+            'roll': roll
+        },
+        'empty': {}
+    }
+    
+    return conditions
+
+
+def get_msid_constant_conditions(conditions, fptemp_limit):
+    """Map MSIDs to their appropriate condition dictionaries based on FPTEMP limit.
+    
+    :param conditions: Dictionary of condition dictionaries from get_condition_dictionaries()
+    :type conditions: dict
+    :param fptemp_limit: FPTEMP limit value
+    :type fptemp_limit: float
+    :returns: Dictionary mapping MSIDs to their condition dictionaries
+    :rtype: dict
+    """
+    if fptemp_limit < -99.0:
+        msid_conditions = {
+            '1dpamzt': conditions['acis_on'],
+            '1deamzt': conditions['acis_on'],
+            'fptemp_11': conditions['acis_on'],
+            '1pdeaat': conditions['psmc_on']
+        }
+    else:
+        msid_conditions = {
+            '1dpamzt': conditions['acis_off_stowed'],
+            '1deamzt': conditions['acis_off_stowed'], 
+            'fptemp_11': conditions['acis_off_stowed'],
+            '1pdeaat': conditions['psmc_off_stowed']
+        }
+
+    # Add spacecraft MSIDs
+    msid_conditions.update({
+        'aacccdpt': conditions['empty'],
+        '4rt700t': conditions['empty'],
+        'pm1thv2t': conditions['sc'],
+        'pm2thv1t': conditions['sc'],
+        'pftank2t': conditions['sc'],
+        'pline03t': conditions['sc'],
+        'pline04t': conditions['sc']
+    })
+
+    return msid_conditions
+
+
+def fill_pitch_range_dwells(balance_obj, pitch_range, anchor_pitch, anchor_time, fill_dwell_type='limit'):
+    """Fill in dwell times for remaining pitch values in the range.
+    
+    :param balance_obj: Balance object instance containing model parameters
+    :type balance_obj: Balance
+    :param pitch_range: Array of pitch values to fill
+    :type pitch_range: numpy.ndarray
+    :param anchor_pitch: Pitch value used as anchor point
+    :type anchor_pitch: float
+    :param anchor_time: Dwell time at anchor pitch
+    :type anchor_time: float
+    :param fill_dwell_type: Type of dwell to fill, either 'limit' or 'offset'
+    :type fill_dwell_type: str
+    :returns: Array of dwell time results for each pitch
+    :rtype: numpy.ndarray
+    """
+    # Remove anchor pitch from range to fill
+    p = pitch_range # [pitch_range != anchor_pitch]
+    
+    # Set up state pairs based on whether we're filling limited or offset dwells
+    # The only reason these are separate is because the offset conditions could be different from the limited conditions,
+    # depending on the MSID.
+    if fill_dwell_type == 'limit':
+        state_pairs = list(
+            (
+                {**{'pitch': anchor_pitch}, **balance_obj.constant_conditions, **balance_obj.offset_conditions},
+                {**{'pitch': p2}, **balance_obj.constant_conditions, **balance_obj.limited_conditions}
+            )
+            for p2 in p)
+    else:
+        state_pairs = list(
+            (
+                {**{'pitch': anchor_pitch}, **balance_obj.constant_conditions, **balance_obj.limited_conditions},
+                {**{'pitch': p2}, **balance_obj.constant_conditions, **balance_obj.offset_conditions}
+            )
+            for p2 in p)
+    
+    # Run the model to get dwell times
+    fill_results = run_state_pairs(
+        balance_obj.msid,
+        balance_obj.model_spec,
+        balance_obj.model_init,
+        balance_obj.limit,
+        balance_obj.date,
+        anchor_time,
+        state_pairs,
+        limit_type=balance_obj.limit_type,
+        n_dwells=30,
+        maneuvers=balance_obj.maneuvers,
+        print_progress=False
+    )
+    
+    return fill_results, p
+
+
+def stack_inputs_for_scale_dwells_mp(
+    results_file,
+    anchors=DEFAULT_ANCHORS,
+    pitch_range=None,
+    model_specs=None,
+    scale_factors=None,
+    overrides=None,
+    msids=None,
+):
+    """
+    Load the data for scale_dwells from the results file.
+
+    :param results_file: Path to results CSV file containing dwell time data
+    :type results_file: str
+    :param anchors: Dictionary of anchor pitch values for each MSID
+    :type anchors: dict
+    :param pitch_range: Array of pitch values to fill
+    :type pitch_range: numpy.ndarray
+    :param model_specs: Dictionary of model specifications for each MSID
+    :type model_specs: dict
+    :param scale_factors: List of scale factors to test
+    :type scale_factors: list
+    :param overrides: Dictionary of dwell time overrides for the default anchors
+    :type overrides: dict
+    :returns: List of dictionaries containing the inputs for each case
+    :rtype: list
+
+    """
+
+    if pitch_range is None:
+        pitch_range = np.arange(45, 181, 1)
+
+    if model_specs is None:
+        home = path.expanduser("~")
+        model_specs = load_model_specs(
+            local_repository_location=home
+            + "/AXAFLIB/chandra_models/"
+        )
+
+    if scale_factors is None:
+        scale_factors = [0.25, 0.5, 0.75, 1.0]
+
+    if overrides is None:
+        overrides = {}
+
+    # Read the results file
+    df = pd.read_csv(results_file)
+
+    df.columns = df.columns.str.strip().str.lower()
+
+    # Columns that define unique cases
+    case_cols = [
+        "fptemp_11_limit",
+        "1dpamzt_limit",
+        "1deamzt_limit",
+        "1pdeaat_limit",
+        "aacccdpt_limit",
+        "4rt700t_limit",
+        "pftank2t_limit",
+        "pm1thv2t_limit",
+        "pm2thv1t_limit",
+        "pline03t_limit",
+        "pline04t_limit",
+        "date",
+        "datesecs",
+        "roll",
+        "chips",
+    ]
+
+    index_cols = case_cols + ["pitch", "dwell_type"]
+
+    if msids is None:   
+        msids = [
+            "1dpamzt",
+            "1deamzt",
+            "fptemp_11",
+            "1pdeaat",
+            "aacccdpt",
+            "pm1thv2t",
+            "pm2thv1t",
+            "4rt700t",
+            "pftank2t",
+            "pline03t",
+            "pline04t",
+            ]
+
+    # Set index for input results DataFrame
+    indexed_df = df.set_index(index_cols)
+    indexed_df.sort_index(inplace=True)
+
+    # Map of MSID to Balance class
+    balance_classes = {
+        "1dpamzt": Balance1DPAMZT,
+        "1deamzt": Balance1DEAMZT,
+        "fptemp_11": BalanceFPTEMP_11,
+        "1pdeaat": Balance1PDEAAT,
+        "aacccdpt": BalanceAACCCDPT,
+        "pm1thv2t": BalancePM1THV2T,
+        "pm2thv1t": BalancePM2THV1T,
+        "4rt700t": Balance4RT700T,
+        "pftank2t": BalancePFTANK2T,
+        "pline03t": BalancePLINE03T,
+        "pline04t": BalancePLINE04T,
+    }
+
+    # Columns for results
+    results_cols = [f"scale_factor_results_{sf}" for sf in scale_factors]
+
+    # Create a new index that adds the msid to the index, and shifts the index so the last two columns are dwell_type and pitch
+    old_index = pd.MultiIndex.from_arrays([df[col] for col in index_cols])
+    new_tuples = [(*idx_tuple, m) for idx_tuple in old_index for m in msids]
+    new_index = pd.MultiIndex.from_tuples(
+        new_tuples,
+        names=index_cols
+        + [
+            "msid",
+        ],
+    )
+
+    # Create a DataFrame with case columns as index and values columns for pitch, composite limit, and scale factors
+    #
+    # For the multiprocessing version, this is only needed to provide the index for the results Dataframe, it should
+    # probably be replaced with a more direct approach to creating the index for the results Dataframe.
+    results_df = pd.DataFrame(index=new_index, columns=results_cols)
+    results_df.sort_index(inplace=True)
+
+    truncated_index = results_df.index.droplevel(
+        ["pitch", "dwell_type", "msid"]
+    ).unique()
+    case_results_index = results_df.index.droplevel(truncated_index.names).unique()
+
+    multiprocessing_inputs = []
+
+    for n, truncated_case_index in enumerate(truncated_index):
+        case_dict = dict(zip(case_cols, truncated_case_index))
+
+        dwell_balance_inputs = {
+            "case_dict": case_dict,
+            "input_case_results": indexed_df.loc[truncated_case_index],
+            "anchors": anchors,
+            "pitch_range": pitch_range,
+            "model_specs": model_specs,
+            "scale_factors": scale_factors,
+            "balance_classes": balance_classes,
+            "msids": msids,
+            "case_results_index": case_results_index,
+            "case_results_cols": results_cols,
+            "overrides": overrides,
+            "id": n,
+        }
+
+        multiprocessing_inputs.append(dwell_balance_inputs)
+
+    return multiprocessing_inputs
+
+
+# create a separate version of scale_dwells that can be used in a multiprocessing pool
+def scale_dwells_mp(inputs):
+    case_dict = inputs["case_dict"]
+    input_case_results = inputs["input_case_results"]
+    anchors = inputs["anchors"]
+    pitch_range = inputs["pitch_range"]
+    model_specs = inputs["model_specs"]
+    scale_factors = inputs["scale_factors"]
+    balance_classes = inputs["balance_classes"]
+    msids = inputs["msids"]
+    case_results_index = inputs["case_results_index"]
+    case_results_cols = inputs["case_results_cols"]
+    overrides = inputs["overrides"]
+    case_results = pd.DataFrame(index=case_results_index, columns=case_results_cols)
+
+    roll = case_dict["roll"]
+    chips = case_dict["chips"]
+    date = case_dict["date"]
+    fptemp_11_limit = case_dict["fptemp_11_limit"]
+    baseline_constant_conditions = get_constant_condition_dictionaries(roll, chips)
+    all_msid_constant_conditions = get_msid_constant_conditions(
+        baseline_constant_conditions, fptemp_11_limit
+    )
+
+    for msid in msids:
+        constant_conditions = all_msid_constant_conditions[msid]
+        limit = case_dict[f"{msid}_limit"]
+        balance_class = balance_classes[msid]
+        balance_obj = balance_class(
+            date=date,
+            model_spec=model_specs[msid],
+            limit=limit,
+            constant_conditions=constant_conditions,
+            margin_factor=1.0,
+        )
+
+        anchor_limited_pitch = anchors[msid]["anchor_limited_pitch"]
+        anchor_offset_pitch = anchors[msid]["anchor_offset_pitch"]
+
+        # These are the composite dwell limits at the anchor pitches, unless overridden
+        offset_time = input_case_results.loc[(anchor_offset_pitch, "limit")].min() # shouldn't max offset time be limited by the limited time?
+        limited_time = input_case_results.loc[(anchor_limited_pitch, "limit")].min()
+        if msid in overrides:
+            if overrides[msid]["offset_time"] is not None and overrides[msid]["limited_time"] is not None:
+                raise ValueError(f"Both offset and limited time cannot be overridden for {msid}")
+                continue
+
+            if overrides[msid]["offset_time"] is not None:
+                offset_time = overrides[msid]["offset_time"]
+
+            elif overrides[msid]["limited_time"] is not None:
+                limited_time = overrides[msid]["limited_time"]
+
+        if pd.isna(offset_time) or pd.isna(limited_time):
+            continue
+
+        for scale in scale_factors:
+            scaled_offset_anchor_time = offset_time * scale
+            scaled_limited_anchor_time = limited_time * scale
+
+            scale_factor_name = f"scale_factor_results_{scale}"
+
+            start_condition = "offset"
+            if msid in overrides and overrides[msid]["limited_time"] is not None:
+                start_condition = "limit"
+
+            if start_condition == "offset":
+                case_results.loc[
+                    (anchor_offset_pitch, "offset", msid), scale_factor_name
+                ] = scaled_offset_anchor_time
+            else:
+                # else start with limited time
+                case_results.loc[
+                    (anchor_limited_pitch, "limit", msid), scale_factor_name
+                ] = scaled_limited_anchor_time
+
+            # If the scale factor is 1.0 and there are no overrides, then we can just use the input case results
+            if scale == 1.0 and msid not in overrides:
+                msid_limited_times = input_case_results.loc[
+                    (slice(None), "limit"), msid
+                ]
+                case_results.loc[
+                    (slice(None), "limit", msid), scale_factor_name
+                ] = msid_limited_times
+
+                msid_offset_times = input_case_results.loc[
+                    (slice(None), "offset"), msid
+                ]
+                case_results.loc[
+                    (slice(None), "offset", msid), scale_factor_name
+                ] = msid_offset_times
+
+                continue
+
+            # Recalculate limited dwell time using scaled offset time
+            dwell1_state = {
+                **{"pitch": anchor_offset_pitch},
+                **constant_conditions,
+                **balance_obj.offset_conditions,
+            }
+            dwell2_state = {
+                **{"pitch": anchor_limited_pitch},
+                **constant_conditions,
+                **balance_obj.limited_conditions,
+            }
+            if start_condition == "limited":
+                dwell1_state, dwell2_state = dwell2_state, dwell1_state
+
+
+            dwell_results = find_second_dwell(
+                balance_obj.date,
+                dwell1_state,
+                dwell2_state,
+                scaled_offset_anchor_time,
+                balance_obj.msid,
+                balance_obj.limit,
+                balance_obj.model_spec,
+                balance_obj.model_init,
+                limit_type=balance_obj.limit_type,
+                n_dwells=30,
+                maneuvers=balance_obj.maneuvers,
+            )
+
+            if dwell_results is not None:
+                # Fill in the dwell times for the rest of the pitch range
+
+                # If the start condition is offset, then the dwell2 time is the limited dwell time
+                if start_condition == "offset":
+                    case_results.loc[
+                        (anchor_limited_pitch, "limit", msid), scale_factor_name
+                    ] = dwell_results["dwell_2_time"]
+
+                    # Fill in the rest of the pitch range for limited dwells
+                    limited_fill_results, p = fill_pitch_range_dwells(
+                        balance_obj,
+                        pitch_range,
+                        anchor_offset_pitch,
+                        scaled_offset_anchor_time,
+                        fill_dwell_type="limit",
+                    )
+                    case_results.loc[
+                        (p, "limit", msid), scale_factor_name
+                    ] = limited_fill_results["t_dwell2"]
+
+                    # The scaled_limited_anchor_time is recalculated in the fill_pitch_range_dwells function using the scaled_offset_anchor_time.
+                    # This is particularly important if overrides are used.
+                    scaled_limited_anchor_time = case_results.loc[
+                        (anchor_limited_pitch, "limit", msid), scale_factor_name
+                    ]       
+
+                    # Fill in the rest of the pitch range for offset dwells
+                    offset_fill_results, p = fill_pitch_range_dwells(
+                        balance_obj,
+                        pitch_range,
+                        anchor_limited_pitch,
+                        scaled_limited_anchor_time,
+                        fill_dwell_type="offset",
+                    )
+                    case_results.loc[
+                        (p, "offset", msid), scale_factor_name
+                    ] = offset_fill_results["t_dwell2"]
+
+                # If the start condition is limit, then the dwell2 time is the offset dwell time
+                else:
+                    case_results.loc[
+                        (anchor_offset_pitch, "offset", msid), scale_factor_name
+                    ] = dwell_results["dwell_2_time"]
+
+                    # Because the scaled_xxxxxx_anchor_time is defined above within the start_condition conditional check, 
+                    # we need to perform the next two fill operations in the same order as the scaled times were defined.
+
+                    # Fill in the rest of the pitch range for offset dwells
+                    offset_fill_results, p = fill_pitch_range_dwells(
+                        balance_obj,
+                        pitch_range,
+                        anchor_limited_pitch,
+                        scaled_limited_anchor_time,
+                        fill_dwell_type="offset",
+                    )
+                    case_results.loc[
+                        (p, "offset", msid), scale_factor_name
+                    ] = offset_fill_results["t_dwell2"]
+
+                    # The scaled_offset_anchor_time is recalculated in the fill_pitch_range_dwells function using the scaled_limited_anchor_time
+                    scaled_offset_anchor_time = case_results.loc[
+                        (anchor_offset_pitch, "offset", msid), scale_factor_name
+                    ]   
+
+                    # Fill in the rest of the pitch range for limited dwells
+                    limited_fill_results, p = fill_pitch_range_dwells(
+                        balance_obj,
+                        pitch_range,
+                        anchor_offset_pitch,
+                        scaled_offset_anchor_time,
+                        fill_dwell_type="limit",
+                    )
+                    case_results.loc[
+                        (p, "limit", msid), scale_factor_name
+                    ] = limited_fill_results["t_dwell2"]
+
+    return case_results

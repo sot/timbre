@@ -9,7 +9,7 @@ from copy import copy
 
 from timbre import Composite, DEFAULT_ANCHORS, get_local_model, get_limited_results, get_offset_results, load_model_specs
 from .balance import Balance2CEAHVPT, BalanceAACCCDPT, Balance4RT700T, BalancePFTANK2T, BalancePLINE03T,\
-    BalancePLINE04T, BalancePM1THV2T, BalancePM2THV1T, Balance1DPAMZT, Balance1DEAMZT, Balance1PDEAAT, BalanceFPTEMP_11
+    BalancePLINE04T, BalancePM1THV2T, BalancePM2THV1T, Balance1DPAMZT, Balance1DEAMZT, Balance1PDEAAT, BalanceFPTEMP_11, scale_dwells_mp
 
 home = expanduser("~")
 
@@ -227,7 +227,7 @@ def run_all_permutations(input_sets, filename, max_dwell=200000, pitch_step=5, m
         print(text1 + text2)
 
 
-def _worker(arg, q):
+def _base_timbre_worker(arg, q):
     """ Run a Timbre case and post the results to the queue
 
     :param arg: Input arguments to run Timbre case
@@ -248,18 +248,15 @@ def _worker(arg, q):
     text2 = f'{num_sets}:\n{input_set}\nFor {date} and Chip Numbers {chips}\n\n'
     print(text1 + text2)
 
-    if n == 0:
-        header = True
-    else:
-        header = False
+    header = ','.join(list(res.columns)) + '\n'
 
-    res = res.to_csv(index=False, header=header)
-    q.put(res)
+    res = res.to_csv(index=False, header=False)
+    q.put((res, header))
 
     return res
 
 
-def _listener(filename, q):
+def _base_timbre_listener(filename, q):
     ''' Listen for messages on the q, write results to file.
 
     :param filename: File to write results
@@ -269,13 +266,144 @@ def _listener(filename, q):
 
     '''
 
+    header_written = False
     with open(filename, 'w') as fid:
         while 1:
-            m = q.get()
+            m, header = q.get()
             if m == 'kill':
                 break
+            if not header_written:
+                fid.write(header)
+                header_written = True
             fid.write(m)
             fid.flush()
+
+
+def _scale_dwells_mp_worker(arg, q):
+    """
+    Worker function for multiprocessing.
+
+    :param arg: Dictionary containing the case dictionary and the input case results
+    :type arg: dict
+    :param q: Queue object
+    :type q: multiprocessing.Manager.Queue
+    :returns: Results CSV string
+    :rtype: str
+    """
+
+    try:
+        res = scale_dwells_mp(arg)
+    except ValueError as e:
+        print(f"Error processing case id {arg['id']}: {e}")
+        case_results_index = arg["case_results_index"]
+        case_results_cols = arg["case_results_cols"]
+        res = pd.DataFrame(index=case_results_index, columns=case_results_cols)
+
+    case_dict = arg['case_dict']
+    id_number = arg['id']
+    case_key_values = case_dict.values()
+    index_tuples = [tuple(case_key_values) + ind for ind in res.index]
+    index_names = list(case_dict.keys()) + list(res.index.names)
+    res.index = pd.MultiIndex.from_tuples(index_tuples, names=index_names)
+
+    header = ','.join(index_names + list(res.columns)) + '\n'
+
+    res = res.to_csv(index=True, header=False)
+
+    q.put((res, header))
+
+    print(f"Processed case id {id_number}")
+
+    return res
+
+
+def stack_inputs_for_base_timbre_queue(input_sets, max_dwell, pitch_step=1, model_specs=None, anchors=DEFAULT_ANCHORS, maneuvers=False, num_cases=None):
+    """ Stack the inputs for the base Timbre queue
+
+    :param input_sets: List of inputs for each case
+    :type input_sets: list
+    :param max_dwell: Maximum dwell time for initial offset cooling
+    :type max_dwell: int, float
+    :param pitch_step: Pitch resolution of output results, see Composite API for limitations
+    :type pitch_step: int, optional
+    :param model_specs: Dictionary of model parameters, if None then the `timbre.load_model_specs` method will be
+        used to load all model specs.
+    :type model_specs: dict or None, optional
+    :param anchors: Dictionary of anchor values, if None is passed then default anchors are used
+    :type anchors: dict or None, optional
+    :param maneuvers: Boolean indicating whether to consider maneuver time
+    :type maneuvers: bool, optional
+    :param num_cases: Number of cases in `input_sets` to process, used to run the first N cases, default is
+        len(input_sets)
+    :type num_cases: int, optional
+
+    :returns: Stacked inputs
+    :rtype: list
+
+    """
+
+    if model_specs is None:
+        home = expanduser("~")
+        model_specs = load_model_specs(local_repository_location=home + "/AXAFLIB/chandra_models")
+
+    if num_cases is None:
+        num_cases = len(input_sets)
+
+    input_cases = []
+    for n, input_set in input_sets[:num_cases].iterrows():
+        input_cases.append((input_set, max_dwell, pitch_step, model_specs, n, num_cases, anchors, maneuvers))
+    return input_cases
+
+
+def generic_process_queue(
+    all_stacked_inputs,
+    output_filename,
+    cpu_count=2,
+    listener_func=_base_timbre_listener,
+    worker_func=_base_timbre_worker,
+    num_cases=None,
+):
+    """ Run a set of Timbre cases using a pool of CPUs
+
+    :param all_stacked_inputs: Stacked inputs for the Timbre cases
+    :type all_stacked_inputs: list
+    :param output_filename: Results output file name
+    :type output_filename: str
+    :param cpu_count: Number of CPUs to use (min of 2, since 1 CPU will be used by the listener)
+    :type cpu_count: int, optional
+    :param listener_func: Function to listen for results from the worker pool
+    :type listener_func: function, optional
+    :param worker_func: Function to run the Timbre cases
+    :type worker_func: function, optional
+
+    """
+
+    if num_cases is None:
+        num_cases = len(all_stacked_inputs)
+
+    manager = Manager()
+    q = manager.Queue()
+    pool = Pool(cpu_count)
+
+    # put listener to work first
+    _ = pool.apply_async(listener_func, (output_filename, q,))
+
+    # start workers
+    jobs = []
+    for arg in all_stacked_inputs[:num_cases]:
+        job = pool.apply_async(worker_func, (arg, q))
+        jobs.append(job)
+
+    # collect results from the workers through the pool result queue
+    for job in jobs:
+        job.get()
+
+    # now we are done, kill the listener
+    q.put('kill')
+    pool.close()
+    pool.join()
+
+    return None
 
 
 def process_queue(input_sets, max_dwell, pitch_step, filename, cpu_count=2, num_cases=None, model_specs=None,
@@ -309,6 +437,7 @@ def process_queue(input_sets, max_dwell, pitch_step, filename, cpu_count=2, num_
     # https://stackoverflow.com/questions/13446445/python-multiprocessing-safely-writing-to-a-file
 
     """
+
     if num_cases is None:
         num_cases = len(input_sets)
 
@@ -317,13 +446,13 @@ def process_queue(input_sets, max_dwell, pitch_step, filename, cpu_count=2, num_
     pool = Pool(cpu_count)
 
     # put listener to work first
-    watcher = pool.apply_async(_listener, (filename, q,))
+    watcher = pool.apply_async(_base_timbre_listener, (filename, q,))
 
     # start workers
     jobs = []
     for n, input_set in input_sets.iloc[:num_cases].iterrows():
         arg = (input_set, max_dwell, pitch_step, model_specs, n, num_cases, anchors, maneuvers)
-        job = pool.apply_async(_worker, (arg, q))
+        job = pool.apply_async(_base_timbre_worker, (arg, q))
         jobs.append(job)
 
     # collect results from the workers through the pool result queue
@@ -450,7 +579,7 @@ def process_queue_hrc(all_results, cea_model_spec, filename, limit=10, limited_m
     pool = Pool(cpu_count)
 
     # put listener to work first
-    watcher = pool.apply_async(_listener, (filename, q,))
+    watcher = pool.apply_async(_base_timbre_listener, (filename, q,))
 
     # start workers
     jobs = []
@@ -508,17 +637,14 @@ def _worker_hrc(arg, q):
     text1 = f'{CxoTime().date}: Finished Limit Set {n + 1} out of {num_sets}:\n{input_case}\n\n'
     print(text1)
 
-    if n == 0:
-        header = True
-    else:
-        header = False
 
     res = process_results(model_results, input_case, anchor_offset_pitch, anchor_limited_pitch, pitch_range,
                           limited_matches_offset=False, imaging_detector=imaging_detector,
                           spectroscopy_detector=spectroscopy_detector)
 
-    res = res.to_csv(index=False, header=header)
-    q.put(res)
+    header = ','.join(res.columns)
+    res = res.to_csv(index=False, header=False)
+    q.put((res, header))
 
     return res
 
