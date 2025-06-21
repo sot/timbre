@@ -9,7 +9,6 @@ from cxotime import CxoTime
 
 from .timbre import run_state_pairs, find_second_dwell, load_model_specs
 
-
 DEFAULT_ANCHORS = {
     '1dpamzt': {'anchor_limited_pitch': 155, 'anchor_offset_pitch': 70},
     '1deamzt': {'anchor_limited_pitch': 155, 'anchor_offset_pitch': 70},
@@ -23,6 +22,7 @@ DEFAULT_ANCHORS = {
     'pline03t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
     'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
     '2ceahvpt': {'anchor_limited_pitch': 150, 'anchor_offset_pitch': 90},
+    'tpc_fsse': {'anchor_limited_pitch': 100, 'anchor_offset_pitch': 170},
 }
 
 
@@ -191,7 +191,7 @@ class Balance(object):
             return None
 
         args = (self.msid, self.model_spec, self.model_init, limit, datesecs, t_1, state_pairs)
-        kwargs = {'limit_type': self.limit_type, 'print_progress': False, 'n_dwells': 30, 'maneuvers':self.maneuvers}
+        kwargs = {'limit_type': self.limit_type, 'print_progress': False, 'n_dwells': 30, 'maneuvers': self.maneuvers}
         results1 = run_state_pairs(*args, **kwargs)
 
         # This deals with a weird case where the anchor limited time@pitch does not reproduce a converged solution at
@@ -353,6 +353,16 @@ class Balance4RT700T(Balance):
         super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
+class BalanceTPC_FSSE(Balance):
+
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0, maneuvers=False):
+        self.msid = 'tpc_fsse'
+        self.model_init = {'tpc_fsse': limit, 'fsse0': limit, 'eclipse': False, }
+        self.limit_type = 'max'
+
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
+
+
 class BalancePFTANK2T(Balance):
 
     def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0, maneuvers=False):
@@ -421,6 +431,7 @@ class Composite(object):
             "1deamzt": 37.5,
             "1pdeaat": 52.5,
             "aacccdpt": -6.5,
+            "tpc_fsse": f_to_c(123.0),
             "4rt700t": f_to_c(100.0),
             "pftank2t": f_to_c(110.0),
             "pm1thv2t": f_to_c(210.0),
@@ -429,7 +440,7 @@ class Composite(object):
             "pline04t": f_to_c(50.0),
         }
 
-        date = "2022:001:00:00:00"
+        date = "2026:001:00:00:00"
         chips = 4
         roll = 0
 
@@ -529,6 +540,8 @@ class Composite(object):
                                    maneuvers=maneuvers)
         self.oba = Balance4RT700T(self.date, self.model_specs['4rt700t'], self.limits['4rt700t'], {},
                                   maneuvers=maneuvers)
+        self.fsse = BalanceTPC_FSSE(self.date, self.model_specs['tpc_fsse'], self.limits['tpc_fsse'], sc_const,
+                                    maneuvers=maneuvers)
         self.mups1b = BalancePM1THV2T(self.date, self.model_specs['pm1thv2t'], self.limits['pm1thv2t'], sc_const,
                                       maneuvers=maneuvers)
         self.mups2a = BalancePM2THV1T(self.date, self.model_specs['pm2thv1t'], self.limits['pm2thv1t'], sc_const,
@@ -604,6 +617,7 @@ class Composite(object):
         self.balance_model('1pdeaat', self.psmc)
         self.balance_model('aacccdpt', self.aca)
         self.balance_model('4rt700t', self.oba)
+        self.balance_model('tpc_fsse', self.fsse)
         self.balance_model('pm1thv2t', self.mups1b)
         self.balance_model('pm2thv1t', self.mups2a)
         self.balance_model('pftank2t', self.tank)
@@ -653,6 +667,7 @@ class Composite(object):
         self.balance_model('1pdeaat', self.psmc)
         self.balance_model('aacccdpt', self.aca)
         self.balance_model('4rt700t', self.oba)
+        self.balance_model('tpc_fsse', self.fsse)
         self.balance_model('pm1thv2t', self.mups1b)
         self.balance_model('pm2thv1t', self.mups2a)
         self.balance_model('pftank2t', self.tank)
@@ -664,10 +679,9 @@ class Composite(object):
         print(f'{dashes}\nFinal Dwell Limits: \n  Pitch    Duration\n{s}\n')
 
 
-
 def get_constant_condition_dictionaries(roll, chips):
     """Generate condition dictionaries for different ACIS and spacecraft states.
-    
+
     :param roll: spacecraft roll angle
     :type roll: float
     :param chips: number of ACIS chips
@@ -715,13 +729,13 @@ def get_constant_condition_dictionaries(roll, chips):
         },
         'empty': {}
     }
-    
+
     return conditions
 
 
 def get_msid_constant_conditions(conditions, fptemp_limit):
     """Map MSIDs to their appropriate condition dictionaries based on FPTEMP limit.
-    
+
     :param conditions: Dictionary of condition dictionaries from get_condition_dictionaries()
     :type conditions: dict
     :param fptemp_limit: FPTEMP limit value
@@ -739,7 +753,7 @@ def get_msid_constant_conditions(conditions, fptemp_limit):
     else:
         msid_conditions = {
             '1dpamzt': conditions['acis_off_stowed'],
-            '1deamzt': conditions['acis_off_stowed'], 
+            '1deamzt': conditions['acis_off_stowed'],
             'fptemp_11': conditions['acis_off_stowed'],
             '1pdeaat': conditions['psmc_off_stowed']
         }
@@ -748,6 +762,7 @@ def get_msid_constant_conditions(conditions, fptemp_limit):
     msid_conditions.update({
         'aacccdpt': conditions['empty'],
         '4rt700t': conditions['empty'],
+        'tpc_fsse': conditions['sc'],
         'pm1thv2t': conditions['sc'],
         'pm2thv1t': conditions['sc'],
         'pftank2t': conditions['sc'],
@@ -760,7 +775,7 @@ def get_msid_constant_conditions(conditions, fptemp_limit):
 
 def fill_pitch_range_dwells(balance_obj, pitch_range, anchor_pitch, anchor_time, fill_dwell_type='limit'):
     """Fill in dwell times for remaining pitch values in the range.
-    
+
     :param balance_obj: Balance object instance containing model parameters
     :type balance_obj: Balance
     :param pitch_range: Array of pitch values to fill
@@ -775,8 +790,8 @@ def fill_pitch_range_dwells(balance_obj, pitch_range, anchor_pitch, anchor_time,
     :rtype: numpy.ndarray
     """
     # Remove anchor pitch from range to fill
-    p = pitch_range # [pitch_range != anchor_pitch]
-    
+    p = pitch_range  # [pitch_range != anchor_pitch]
+
     # Set up state pairs based on whether we're filling limited or offset dwells
     # The only reason these are separate is because the offset conditions could be different from the limited conditions,
     # depending on the MSID.
@@ -794,7 +809,7 @@ def fill_pitch_range_dwells(balance_obj, pitch_range, anchor_pitch, anchor_time,
                 {**{'pitch': p2}, **balance_obj.constant_conditions, **balance_obj.offset_conditions}
             )
             for p2 in p)
-    
+
     # Run the model to get dwell times
     fill_results = run_state_pairs(
         balance_obj.msid,
@@ -809,18 +824,18 @@ def fill_pitch_range_dwells(balance_obj, pitch_range, anchor_pitch, anchor_time,
         maneuvers=balance_obj.maneuvers,
         print_progress=False
     )
-    
+
     return fill_results, p
 
 
 def stack_inputs_for_scale_dwells_mp(
-    results_file,
-    anchors=DEFAULT_ANCHORS,
-    pitch_range=None,
-    model_specs=None,
-    scale_factors=None,
-    overrides=None,
-    msids=None,
+        results_file,
+        anchors=DEFAULT_ANCHORS,
+        pitch_range=None,
+        model_specs=None,
+        scale_factors=None,
+        overrides=None,
+        msids=None,
 ):
     """
     Load the data for scale_dwells from the results file.
@@ -849,7 +864,7 @@ def stack_inputs_for_scale_dwells_mp(
         home = path.expanduser("~")
         model_specs = load_model_specs(
             local_repository_location=home
-            + "/AXAFLIB/chandra_models/"
+                                      + "/AXAFLIB/chandra_models/"
         )
 
     if scale_factors is None:
@@ -871,6 +886,7 @@ def stack_inputs_for_scale_dwells_mp(
         "1pdeaat_limit",
         "aacccdpt_limit",
         "4rt700t_limit",
+        "tpc_fsse_limit",
         "pftank2t_limit",
         "pm1thv2t_limit",
         "pm2thv1t_limit",
@@ -884,7 +900,7 @@ def stack_inputs_for_scale_dwells_mp(
 
     index_cols = case_cols + ["pitch", "dwell_type"]
 
-    if msids is None:   
+    if msids is None:
         msids = [
             "1dpamzt",
             "1deamzt",
@@ -894,10 +910,11 @@ def stack_inputs_for_scale_dwells_mp(
             "pm1thv2t",
             "pm2thv1t",
             "4rt700t",
+            "tpc_fsse",
             "pftank2t",
             "pline03t",
             "pline04t",
-            ]
+        ]
 
     # Set index for input results DataFrame
     indexed_df = df.set_index(index_cols)
@@ -913,6 +930,7 @@ def stack_inputs_for_scale_dwells_mp(
         "pm1thv2t": BalancePM1THV2T,
         "pm2thv1t": BalancePM2THV1T,
         "4rt700t": Balance4RT700T,
+        "tpc_fsse": BalanceTPC_FSSE,
         "pftank2t": BalancePFTANK2T,
         "pline03t": BalancePLINE03T,
         "pline04t": BalancePLINE04T,
@@ -927,9 +945,9 @@ def stack_inputs_for_scale_dwells_mp(
     new_index = pd.MultiIndex.from_tuples(
         new_tuples,
         names=index_cols
-        + [
-            "msid",
-        ],
+              + [
+                  "msid",
+              ],
     )
 
     # Create a DataFrame with case columns as index and values columns for pitch, composite limit, and scale factors
@@ -1009,7 +1027,8 @@ def scale_dwells_mp(inputs):
         anchor_offset_pitch = anchors[msid]["anchor_offset_pitch"]
 
         # These are the composite dwell limits at the anchor pitches, unless overridden
-        offset_time = input_case_results.loc[(anchor_offset_pitch, "limit")].min() # shouldn't max offset time be limited by the limited time?
+        offset_time = input_case_results.loc[
+            (anchor_offset_pitch, "limit")].min()  # shouldn't max offset time be limited by the limited time?
         limited_time = input_case_results.loc[(anchor_limited_pitch, "limit")].min()
         if msid in overrides:
             if overrides[msid]["offset_time"] is not None and overrides[msid]["limited_time"] is not None:
@@ -1077,7 +1096,6 @@ def scale_dwells_mp(inputs):
             if start_condition == "limited":
                 dwell1_state, dwell2_state = dwell2_state, dwell1_state
 
-
             dwell_results = find_second_dwell(
                 balance_obj.date,
                 dwell1_state,
@@ -1117,7 +1135,7 @@ def scale_dwells_mp(inputs):
                     # This is particularly important if overrides are used.
                     scaled_limited_anchor_time = case_results.loc[
                         (anchor_limited_pitch, "limit", msid), scale_factor_name
-                    ]       
+                    ]
 
                     # Fill in the rest of the pitch range for offset dwells
                     offset_fill_results, p = fill_pitch_range_dwells(
@@ -1155,7 +1173,7 @@ def scale_dwells_mp(inputs):
                     # The scaled_offset_anchor_time is recalculated in the fill_pitch_range_dwells function using the scaled_limited_anchor_time
                     scaled_offset_anchor_time = case_results.loc[
                         (anchor_offset_pitch, "offset", msid), scale_factor_name
-                    ]   
+                    ]
 
                     # Fill in the rest of the pitch range for limited dwells
                     limited_fill_results, p = fill_pitch_range_dwells(

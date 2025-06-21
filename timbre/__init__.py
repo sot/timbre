@@ -7,7 +7,7 @@ from .timbre import load_github_model_specs, get_github_chandra_models_version_i
 from .balance import Balance, Balance1DPAMZT, Balance1DEAMZT, Balance1PDEAAT, BalanceFPTEMP_11, BalanceAACCCDPT  # noqa
 from .balance import Balance4RT700T, BalancePFTANK2T, BalancePM1THV2T, BalancePM2THV1T, BalancePLINE04T  # noqa
 from .balance import BalancePLINE03T, Composite, get_limited_results, get_offset_results, DEFAULT_ANCHORS  # noqa
-from .balance import Balance2CEAHVPT, scale_dwells_mp, stack_inputs_for_scale_dwells_mp  # noqa
+from .balance import Balance2CEAHVPT, BalanceTPC_FSSE, scale_dwells_mp, stack_inputs_for_scale_dwells_mp  # noqa
 
 from .run_tools import add_inputs, run_instance, run_all_permutations, process_queue, process_queue_hrc, stack_inputs_for_base_timbre_queue
 from .run_tools import _base_timbre_listener, _base_timbre_worker, _scale_dwells_mp_worker, generic_process_queue  # noqa
