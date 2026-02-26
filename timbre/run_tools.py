@@ -8,14 +8,15 @@ from multiprocessing import Pool, Manager
 from copy import copy
 
 from timbre import Composite, DEFAULT_ANCHORS, get_local_model, get_limited_results, get_offset_results, load_model_specs
-from .balance import Balance2CEAHVPT, BalanceAACCCDPT, Balance4RT700T, BalancePFTANK2T, BalancePLINE03T,\
-    BalancePLINE04T, BalancePM1THV2T, BalancePM2THV1T, Balance1DPAMZT, Balance1DEAMZT, Balance1PDEAAT, BalanceFPTEMP_11, scale_dwells_mp
+from .balance import (Balance2CEAHVPT, BalanceAACCCDPT, Balance4RT700T, BalancePFTANK2T, BalancePLINE03T,\
+    BalancePLINE04T, BalancePM1THV2T, BalancePM2THV1T, Balance1DPAMZT, Balance1DEAMZT, Balance1PDEAAT, BalanceFPTEMP_11,
+    BalanceTPC_FSSE, scale_dwells_mp)
 
 home = expanduser("~")
 
 INPUT_COLUMNS = ['fptemp_11_limit', '1dpamzt_limit', '1deamzt_limit', '1pdeaat_limit', 'aacccdpt_limit',
-                 '4rt700t_limit', 'pftank2t_limit', 'pm1thv2t_limit', 'pm2thv1t_limit', 'pline03t_limit',
-                 'pline04t_limit', 'date', 'datesecs', 'dwell_type', 'roll', 'chips', 'pitch']
+                 '4rt700t_limit', 'tpc_fsse_limit', 'pftank2t_limit', 'pm1thv2t_limit', 'pm2thv1t_limit',
+                 'pline03t_limit', 'pline04t_limit', 'date', 'datesecs', 'dwell_type', 'roll', 'chips', 'pitch']
 
 MODEL_SPECS = load_model_specs(local_repository_location=home + "/AXAFLIB/chandra_models")
 
