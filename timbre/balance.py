@@ -23,6 +23,7 @@ DEFAULT_ANCHORS = {
     'pline04t': {'anchor_limited_pitch': 175, 'anchor_offset_pitch': 70},
     '2ceahvpt': {'anchor_limited_pitch': 150, 'anchor_offset_pitch': 90},
     'tpc_fsse': {'anchor_limited_pitch': 100, 'anchor_offset_pitch': 170},
+    'tpcm_rw5': {'anchor_limited_pitch': 100, 'anchor_offset_pitch': 170},
 }
 
 
@@ -363,6 +364,16 @@ class BalanceTPC_FSSE(Balance):
         super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
 
 
+class BalanceTPCM_RW5(Balance):
+
+    def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0, maneuvers=False):
+        self.msid = 'tpcm_rw5'
+        self.model_init = {'tpcm_rw5': limit, 'rw50': limit, 'eclipse': False, }
+        self.limit_type = 'max'
+
+        super().__init__(date, model_spec, limit, constant_conditions, margin_factor, maneuvers=maneuvers)
+
+
 class BalancePFTANK2T(Balance):
 
     def __init__(self, date, model_spec, limit, constant_conditions, margin_factor=1.0, maneuvers=False):
@@ -432,6 +443,7 @@ class Composite(object):
             "1pdeaat": 52.5,
             "aacccdpt": -6.5,
             "tpc_fsse": f_to_c(123.0),
+            "tpcm_rw5": f_to_c(125.0),
             "4rt700t": f_to_c(100.0),
             "pftank2t": f_to_c(110.0),
             "pm1thv2t": f_to_c(210.0),
@@ -542,6 +554,8 @@ class Composite(object):
                                   maneuvers=maneuvers)
         self.fsse = BalanceTPC_FSSE(self.date, self.model_specs['tpc_fsse'], self.limits['tpc_fsse'], sc_const,
                                     maneuvers=maneuvers)
+        self.rw5 = BalanceTPCM_RW5(self.date, self.model_specs['tpcm_rw5'], self.limits['tpcm_rw5'], sc_const,
+                                    maneuvers=maneuvers)
         self.mups1b = BalancePM1THV2T(self.date, self.model_specs['pm1thv2t'], self.limits['pm1thv2t'], sc_const,
                                       maneuvers=maneuvers)
         self.mups2a = BalancePM2THV1T(self.date, self.model_specs['pm2thv1t'], self.limits['pm2thv1t'], sc_const,
@@ -618,6 +632,7 @@ class Composite(object):
         self.balance_model('aacccdpt', self.aca)
         self.balance_model('4rt700t', self.oba)
         self.balance_model('tpc_fsse', self.fsse)
+        self.balance_model('tpcm_rw5', self.rw5)
         self.balance_model('pm1thv2t', self.mups1b)
         self.balance_model('pm2thv1t', self.mups2a)
         self.balance_model('pftank2t', self.tank)
@@ -668,6 +683,7 @@ class Composite(object):
         self.balance_model('aacccdpt', self.aca)
         self.balance_model('4rt700t', self.oba)
         self.balance_model('tpc_fsse', self.fsse)
+        self.balance_model('tpcm_rw5', self.rw5)
         self.balance_model('pm1thv2t', self.mups1b)
         self.balance_model('pm2thv1t', self.mups2a)
         self.balance_model('pftank2t', self.tank)
@@ -763,6 +779,7 @@ def get_msid_constant_conditions(conditions, fptemp_limit):
         'aacccdpt': conditions['empty'],
         '4rt700t': conditions['empty'],
         'tpc_fsse': conditions['sc'],
+        'tpcm_rw5': conditions['sc'],
         'pm1thv2t': conditions['sc'],
         'pm2thv1t': conditions['sc'],
         'pftank2t': conditions['sc'],
@@ -887,6 +904,7 @@ def stack_inputs_for_scale_dwells_mp(
         "aacccdpt_limit",
         "4rt700t_limit",
         "tpc_fsse_limit",
+        "tpcm_rw5_limit",
         "pftank2t_limit",
         "pm1thv2t_limit",
         "pm2thv1t_limit",
@@ -911,6 +929,7 @@ def stack_inputs_for_scale_dwells_mp(
             "pm2thv1t",
             "4rt700t",
             "tpc_fsse",
+            "tpcm_rw5",
             "pftank2t",
             "pline03t",
             "pline04t",
@@ -931,6 +950,7 @@ def stack_inputs_for_scale_dwells_mp(
         "pm2thv1t": BalancePM2THV1T,
         "4rt700t": Balance4RT700T,
         "tpc_fsse": BalanceTPC_FSSE,
+        "tpcm_rw5": BalanceTPCM_RW5,
         "pftank2t": BalancePFTANK2T,
         "pline03t": BalancePLINE03T,
         "pline04t": BalancePLINE04T,
