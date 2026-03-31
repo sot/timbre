@@ -20,6 +20,7 @@ NON_STATE_NAMES = {'aacccdpt': ['aca0', ],
                    'pftank2t': ['pf0tank2t', ],
                    '4rt700t': ['oba0', ],
                    'tpc_fsse': ['fsse0', ],
+                   'tpcm_rw5': ['rw50', ],
                    'pline03t': ['pline03t0', ],
                    'pline04t': ['pline04t0', ],
                    'pm1thv2t': ['mups0', ],
@@ -39,6 +40,7 @@ MODEL_LOCATIONS = {
     'pftank2t': 'chandra_models/xija/pftank2t/pftank2t_spec.json',
     '4rt700t': 'chandra_models/xija/fwdblkhd/4rt700t_spec.json',
     'tpc_fsse': 'chandra_models/xija/tpc_fsse/tpc_fsse_spec.json',
+    'tpcm_rw5': 'chandra_models/xija/rwa5/tpcm_rw5_spec.json',
     'pline03t': 'chandra_models/xija/pline/pline03t_model_spec.json',
     'pline04t': 'chandra_models/xija/pline/pline04t_model_spec.json',
     'pm1thv2t': 'chandra_models/xija/mups_valve/pm1thv2t_spec.json',
@@ -816,20 +818,6 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
         results = run_state_pairs(msid, model_specs[msid], model_init[msid], limit, date, t_dwell1, state_pairs)
     """
 
-    non_state_names = {'aacccdpt': ['aca0', ],
-                       'pftank2t': ['pf0tank2t', ],
-                       '4rt700t': ['oba0', ],
-                       'tpc_fsse': ['fsse0', ],
-                       'pline03t': ['pline03t0', ],
-                       'pline04t': ['pline04t0', ],
-                       'pm1thv2t': ['mups0', ],
-                       'pm2thv1t': ['mups0', 'mups1'],
-                       '1deamzt': ['dea0', ],
-                       '1dpamzt': ['dpa0', ],
-                       'fptemp': ['fptemp', '1cbat', 'sim_px'],
-                       '1pdeaat': ['pin1at', ],
-                       '2ceahvpt': ['cea0', 'cea1']}
-
     base_dtype = [('msid', 'U20'),
                   ('date', 'U8'),
                   ('datesecs', float),
@@ -889,7 +877,7 @@ def run_state_pairs(msid, model_spec, init, limit, date, dwell_1_duration, state
                dwell_results['colder_state']]
 
         for key, value in init.items():
-            if key not in non_state_names[msid] and key not in dwell1_state and key not in msid:
+            if key not in NON_STATE_NAMES[msid] and key not in dwell1_state and key not in msid:
                 dwell1_state[key] = value
                 dwell2_state[key] = value
 
