@@ -27,7 +27,7 @@ NON_STATE_NAMES = {'aacccdpt': ['aca0', ],
                    'pm2thv1t': ['mups0', 'mups1'],
                    '1deamzt': ['dea0', ],
                    '1dpamzt': ['dpa0', ],
-                   'fptemp_11': ['fptemp', '1cbat', 'sim_px'],
+                   'fptemp': ['fptemp', '1cbat', 'sim_px'],
                    '1pdeaat': ['pin1at', ],
                    '2ceahvpt': ['cea0', 'cea1']}
 

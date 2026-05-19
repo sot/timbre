@@ -643,7 +643,7 @@ def _worker_hrc(arg, q):
                           limited_matches_offset=False, imaging_detector=imaging_detector,
                           spectroscopy_detector=spectroscopy_detector)
 
-    header = ','.join(res.columns)
+    header = ','.join(res.columns) + '\n'
     res = res.to_csv(index=False, header=False)
     q.put((res, header))
 
